@@ -1,0 +1,132 @@
+#include <arduino.h>
+#include <ctype.h>
+#include <math.h>
+#include <time.h>
+#include "Config.h"
+#include "Controller.h"
+#include "main.h"
+#include "Map.h"
+
+#define JOYSTICK_X_PIN A6
+#define JOYSTICK_Y_PIN A7
+#define JOYSTICK_BUTTON_PIN 2
+
+// jump
+int maxJumpHeight = int(1.2 * sqResh); // jump this high
+float fFPS = 30; // approximate FPS
+int acceleratedMotion[200];
+int maxJump_idx;
+int verticalAdvance = 0;
+int jumping = 0;
+int z = 0; // same unit as sqRes
+
+void move(int32_t& x, int32_t& y, int32_t angle) {
+    float rad = angle * 6.2831f / around;
+    fptype xTest = x + int(MOVE_SPD * cos(rad));
+    fptype yTest = y + int(MOVE_SPD * sin(rad));
+
+    // check for wall collision
+    int safetyX = ((aroundq < angle) && (angle < around3q)) ? +safety_dist : -safety_dist;
+    int safetyY = (angle < aroundh) ? -safety_dist : +safety_dist;
+    int adjXMap = ((aroundq < angle) && (angle < around3q)) ? -1 : 0;
+    int adjYMap = (angle > aroundh) ? -1 : 0;
+
+    fptype xWall, yWall;
+    int wallID = Cast(angle, xWall, yWall);
+    if (sq(x - xTest) + sq(y - yTest) >= sq(x - xWall) + sq(y - yWall)) { // inside wall
+        if (wallID % 2 == 0) { // vertical wall ||
+            x = xWall + safetyX;
+            y = yTest;                          //                __
+            if (map(y / sqRes, x / sqRes) != 0) // it's a corner |
+                y = (yTest / sqRes - adjYMap) * sqRes + safetyY;
+        }
+        else { // horizontal wall ==
+            x = xTest;
+            y = yWall + safetyY;                //                __
+            if (map(y / sqRes, x / sqRes) != 0) // it's a corner |
+                x = (xTest / sqRes - adjXMap) * sqRes + safetyX;
+        }
+    }
+    else // free cell
+        x = xTest, y = yTest;
+}
+
+void rotate(int32_t& angle, int dir, int around) {
+    angle = (angle + dir * ROTATE_SPD + around) % around;
+}
+
+void initController() {
+    float fDist = 0, fSpeed = 0, G = 10.f * sqRes; // G was empirically chosen as we don't have a proper world scale here
+    for (int i = 0; i < 200; i++) {
+        acceleratedMotion[i] = (int)fDist;
+
+        fSpeed += G / fFPS;
+        fDist += fSpeed / fFPS;
+    }
+
+    // search for the acceleratedMotion entry so that we'll decelerate to zero speed at max jump height
+    for (maxJump_idx = 0; maxJump_idx < 200; maxJump_idx++)
+        if (acceleratedMotion[maxJump_idx] > maxJumpHeight)
+            break;
+
+    if (maxJump_idx >= 200) maxJump_idx = 199;
+
+    elevation_perc = 100 * z / sqResh; // as percentage from wall half height
+
+    pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
+}
+
+void loopController(int32_t& x, int32_t& y, int32_t& angle, int around) {
+    int xValue = analogRead(JOYSTICK_X_PIN); // larger values leftwards
+    int yValue = analogRead(JOYSTICK_Y_PIN); // larger values upwards
+    int button = digitalRead(JOYSTICK_BUTTON_PIN); // 0/1 = pressed/not pressed
+
+    bool bJump = false;
+    if (button == 0)
+        bJump = true;
+    else {
+        if (xValue > 600) // rotate left
+            rotate(angle, -ROTATE_SPD, around);
+        if (xValue < 400) // rotate right
+            rotate(angle, +ROTATE_SPD, around);
+        if (yValue > 600) // pedal forward
+            move(x, y, angle);
+        if (yValue < 400) // pedal backward
+            move(x, y, (angle + around / 2) % around);
+    }
+
+    // jump
+    static int jump_idx;
+    if (bJump && !jumping) {
+        jumping = 1;
+        verticalAdvance = 1;
+        jump_idx = maxJump_idx - 1;
+        z = maxJumpHeight - acceleratedMotion[jump_idx];
+    }
+    else
+    if (jumping) {
+        if (verticalAdvance > 0) {
+            if (jump_idx > 0) {
+                jump_idx--;
+                z = maxJumpHeight - acceleratedMotion[jump_idx];
+            }
+            else {
+                verticalAdvance = -1;
+                z = maxJumpHeight;
+            }
+        }
+        else
+        if (verticalAdvance < 0) {
+            if (z > 0) {
+                jump_idx++;
+                z = max(0, maxJumpHeight - acceleratedMotion[jump_idx]);
+            }
+            else {
+                verticalAdvance = 0;
+                jumping = 0;
+            }
+        }
+    }
+
+    elevation_perc = 100 * z / sqResh; // as percentage from wall half height
+}
