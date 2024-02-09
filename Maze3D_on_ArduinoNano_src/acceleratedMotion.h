@@ -1,6 +1,6 @@
 int maxJumpHeight = int(1.2 * sqResh); // jump this high
 int maxJump_idx = 10;
-const uint16_t PROGMEM acceleratedMotion[] = {
+const uint32_t PROGMEM acceleratedMotion[] = {
       0,      11,      34,      68,     113,     170,     238,     318,     409,     512,     625,     750,     887,    1035,    1194,    1365, 
    1547,    1740,    1945,    2161,    2389,    2628,    2878,    3140,    3413,    3697,    3993,    4300,    4619,    4949,    5290,    5643, 
    6007,    6382,    6769,    7168,    7577,    7998,    8430,    8874,    9329,    9796,   10274,   10763,   11263,   11775,   12299,   12834, 

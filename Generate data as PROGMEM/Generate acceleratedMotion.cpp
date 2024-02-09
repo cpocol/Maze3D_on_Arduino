@@ -38,7 +38,7 @@ int main()
 
     fprintf(fp, "int maxJumpHeight = int(1.2 * sqResh); // jump this high\n");
     fprintf(fp, "int maxJump_idx = %d;\n", maxJump_idx);
-    fprintf(fp, "const uint16_t PROGMEM acceleratedMotion[] = {");
+    fprintf(fp, "const uint32_t PROGMEM acceleratedMotion[] = {");
 
     for (int i = 0; i < 200; i++) {
         if (i % 16 == 0)

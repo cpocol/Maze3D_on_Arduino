@@ -122,7 +122,7 @@ int32_t Cast(int16_t angle, fptype& xHit, fptype& yHit) {
 }
 
 void RenderColumn(int col, fptype h, int32_t textureColumn) {
-    fptype Dh_fp = (texRes << 22) / h; // 1 row in screen space is this many rows in texture space; use fixed point
+    fptype Dh_fp = (texRes << 6) / h; // 1 row in screen space is this many rows in texture space; use fixed point
     fptype textureRow_fp = 0;
     //int minRow = screenHh - h / 2; // no elevation
     int minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100;
@@ -133,20 +133,29 @@ void RenderColumn(int col, fptype h, int32_t textureColumn) {
         minRow = 0;
     }
 
-    uint32_t textureOffInit = textureColumn * texRes; // huge speedup: 90 degs pre-rotated texture
+    uint16_t textureOffsetInit = textureColumn * texRes; // huge speedup: 90 degs pre-rotated texture
+    unsigned char* pScreen = screen + col;
+    const unsigned char* pTexture = Texture + textureOffsetInit;
+    static unsigned char texCol[texRes];
+    memcpy_P(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
     for (int row = minRow; row < maxRow; row++) {
-        uint32_t textureOff = textureOffInit + (textureRow_fp >> 22);
-        uint32_t textureOffByte = textureOff / 8;
-        uint32_t textureOffBit = textureOff % 8;
+#ifdef TEXTURE_1bpp // configured in "Generate Texture.cpp"
+        uint16_t textureOffset = textureOffsetInit + uint16_t(textureRow_fp >> 6);
+        uint16_t textureOffsetByte = textureOffset / 8;
+        uint8_t textureOffsetBit = uint8_t(textureOffset) % 8;
 
-        //char pixelByte = *(Texture + textureOffByte);
-        char pixelByte = pgm_read_byte_near(Texture + textureOffByte);
-        char pixel = ((pixelByte & (1 << textureOffBit)) >> textureOffBit);
-        //char pixel = 1;
+        //unsigned char pixelByte = *(Texture + textureOffsetByte);
+        unsigned char pixelByte = pgm_read_byte_near(Texture + textureOffsetByte);
+        unsigned char pixel = (pixelByte >> textureOffsetBit) & 1;
+#else
+        //unsigned char pixel = *(pTexture + uint16_t(textureRow_fp >> 6));
+        //unsigned char pixel = pgm_read_byte_near(pTexture + uint16_t(textureRow_fp >> 6));
+        //unsigned char pixel = 1;
+        unsigned char pixel = texCol[uint16_t(textureRow_fp >> 6)];
+#endif
 
-        unsigned char* screenAddr = screen + (col + (row / 8) * screenW);
-
-        (*screenAddr) |= (pixel << (row & 7));
+        unsigned char* screenAddr = pScreen + (row / 8) * screenW;
+        *screenAddr |= (pixel << (row & 7));
 
         textureRow_fp += Dh_fp;
     }

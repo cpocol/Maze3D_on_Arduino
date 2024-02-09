@@ -1,6 +1,6 @@
 #pragma once
 
-#define MOVE_SPD (1 * sqRes / 100)
+#define MOVE_SPD (10 * sqRes / 100)
 #define ROTATE_SPD 3
 #define VERTICAL_SPD (sqRes/25)
 
