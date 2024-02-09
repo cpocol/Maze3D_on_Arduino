@@ -32,7 +32,7 @@ int main()
     if (maxJump_idx >= 200) maxJump_idx = 199;
 
     // save to file
-    FILE* fp = fopen("..\\Maze3D_on_ArduinoNano_src\\acceleratedMotion._cpp", "w");
+    FILE* fp = fopen("..\\Maze3D_on_ArduinoNano_src\\acceleratedMotion.h", "w");
     if (!fp)
         printf("error");
 

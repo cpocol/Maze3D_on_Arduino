@@ -8,7 +8,7 @@
 
 #define sq(x) ((x)*(x))
 
-Adafruit_SSD1306 display(screenW, 64);
+Adafruit_SSD1306 display(screenW, screenH);
 
 const int screenSize = screenW * ((screenH + 7) / 8);
 uint8_t screen[screenSize];
@@ -19,7 +19,7 @@ const fptype mapSizeWidth_fp = (((fptype)mapSizeWidth) << fp), mapSizeHeight_fp 
 //initial
 int32_t xC = 2.5 * sqRes;
 int32_t yC = 2.5 * sqRes;
-int32_t angleC = 600;
+int16_t angleC = 600;
 int elevation_perc = 0; //as percentage from wall half height
 
 float X2Rad(int X) {
@@ -27,7 +27,7 @@ float X2Rad(int X) {
 }
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(250000);
 
     display.setBuffer(screen);
     if(!display.begin()) {
@@ -156,13 +156,9 @@ void Render() {
     static long t_prev = millis();
     static long t0 = millis();
     memset(screen, 0, screenSize);
-    static long t1 = millis();
-    static int dt_clear = int(t1 - t0);
-    t0 = t1;
+    static long t1 = millis();   static int dt_clear = int(t1 - t0);   t0 = t1;
 
-//    Serial.println(angleC);
-
-    fptype viewerToScreen_sq = sq(screenWh) * 3; // FOV = 60 degs => viewerToScreen = screenWh * sqrt(3)
+    uint16_t viewerToScreen_sq = sq(screenWh) * 3; // FOV = 60 degs => viewerToScreen = screenWh * sqrt(3)
     uint32_t textureColumn;
     for (int16_t col = 0; col < screenW; col++) {
         int16_t ang = (screenWh - col + angleC + around) % around;
@@ -172,15 +168,12 @@ void Render() {
         textureColumn = ((xHit + yHit) % sqRes) * texRes / sqRes;
 
         fptype dist_sq = sq(xC - xHit) + sq(yC - yHit) + 1; // +1 avoids division by zero
-        fptype h = fptype(sqRes * sqrtf((viewerToScreen_sq + sq((float)screenWh - col)) / (float)dist_sq) + 0.5f);
-        //fptype h = 80;
+        fptype h = fptype(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
         h = h / 4; // adjust until it looks fine
 
         RenderColumn(col, h, textureColumn);
     }
-    t1 = millis();
-    static int dt_render = int(t1 - t0);
-    t0 = t1;
+    t1 = millis();   static int dt_render = int(t1 - t0);   t0 = t1;
 
     // mirror image; we need this because the map's CS is left handed while the ray casting works right handed
     for (int r = 0; r < (screenH + 7) / 8; r++)
@@ -189,14 +182,10 @@ void Render() {
             *(screen + r * screenW + col) = *(screen + r * screenW + screenW - 1 - col);
             *(screen + r * screenW + screenW - 1 - col) = aux;
         }
-    t1 = millis();
-    static int dt_mirror = int(t1 - t0);
-    t0 = t1;
+    t1 = millis();   static int dt_mirror = int(t1 - t0);   t0 = t1;
 
     display.display();
-    t1 = millis();
-    static int dt_flush = int(t1 - t0);
-    t0 = t1;
+    t1 = millis();   static int dt_flush = int(t1 - t0);   t0 = t1;
 
     static float FPS = 1000.f / (t1 - t_prev);
     Serial.print("FPS: ");         Serial.print(FPS);
