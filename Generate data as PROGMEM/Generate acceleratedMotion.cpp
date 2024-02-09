@@ -3,39 +3,47 @@
 #include <math.h>
 #include <string.h>
 
-const int pow2 = 5;
-const int texRes = (1 << pow2);
-char Texture[texRes * texRes];
+// !!! sqRes must be the same as in the Arduino project !!!
+
+const int sqRes = (1 << 10), sqResh = sqRes / 2;
+
+float fFPS = 30; // approximate FPS
+
+int acceleratedMotion[200];
+int maxJumpHeight = int(1.2 * sqResh); // jump this high
+int maxJump_idx;
 
 int main()
 {
-    // generate texture
-    for (int i = 0; i < texRes; i++)
-        for (int j = 0; j < texRes; j++)
-            *(Texture + i * texRes + j) = ((0.1 * texRes < i) && (i < 0.7 * texRes) && (0.2 * texRes < j) && (j < 0.8 * texRes)) ? 0 : 1;
+    // generate
+    float fDist = 0, fSpeed = 0, G = 10.f * sqRes; // G was empirically chosen as we don't have a proper world scale here
+    for (int i = 0; i < 200; i++) {
+        acceleratedMotion[i] = (int)fDist;
+
+        fSpeed += G / fFPS;
+        fDist += fSpeed / fFPS;
+    }
+
+    // search for the acceleratedMotion entry so that we'll decelerate to zero speed at max jump height
+    for (maxJump_idx = 0; maxJump_idx < 200; maxJump_idx++)
+        if (acceleratedMotion[maxJump_idx] > maxJumpHeight)
+            break;
+
+    if (maxJump_idx >= 200) maxJump_idx = 199;
 
     // save to file
-    FILE* fp = fopen("..\\Maze3D_on_ArduinoNano\\Texture.h", "w");
+    FILE* fp = fopen("..\\Maze3D_on_ArduinoNano_src\\acceleratedMotion._cpp", "w");
     if (!fp)
         printf("error");
 
-    fprintf(fp, "const int32_t texRes = (1 << %d);\n\n", pow2);
-    fprintf(fp, "const uint8_t PROGMEM Texture[] = {");
+    fprintf(fp, "int maxJumpHeight = int(1.2 * sqResh); // jump this high\n");
+    fprintf(fp, "int maxJump_idx = %d;\n", maxJump_idx);
+    fprintf(fp, "const uint16_t PROGMEM acceleratedMotion[] = {");
 
-    // save as binary
-    for (int i = 0; i < texRes * texRes;) {
-        if (i % texRes == 0)
+    for (int i = 0; i < 200; i++) {
+        if (i % 16 == 0)
             fprintf(fp, "\n");
-        int packetPixels = 0;
-        for (int j = 0; j < 8; j++, i++)
-            packetPixels |= (Texture[i] << j);
-
-        char str[200] = "0b00000000";
-        char str1[200];
-        itoa(packetPixels, str1, 2);
-        strcpy(str + 10 - strlen(str1), str1);
-
-        fprintf(fp, "%s,", str);
+        fprintf(fp, "%7d, ", acceleratedMotion[i]);
     }
     fprintf(fp, "\n};\n");
     fclose(fp);
