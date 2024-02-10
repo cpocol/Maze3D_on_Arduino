@@ -193,7 +193,7 @@ void Render() {
         }
     t1 = millis();   static int dt_mirror = int(t1 - t0);   t0 = t1;
 
-    display.display();
+    display.flush();
     t1 = millis();   static int dt_flush = int(t1 - t0);   t0 = t1;
 
     static float FPS = 1000.f / (t1 - t_prev);

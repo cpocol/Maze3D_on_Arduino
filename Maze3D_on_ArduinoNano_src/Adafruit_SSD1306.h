@@ -1,5 +1,4 @@
-#ifndef _Adafruit_SSD1306_H_
-#define _Adafruit_SSD1306_H_
+#pragma once
 
 #include <Wire.h>
 
@@ -35,17 +34,14 @@ class Adafruit_SSD1306 {
 public:
   Adafruit_SSD1306(uint8_t w_, uint8_t h_);
 
-  void setBuffer(uint8_t *buffer_) {
-    buffer = buffer_;
-  }
+  void setBuffer(uint8_t *buffer_) { buffer = buffer_; }
 
   bool begin(uint8_t i2caddr = 0);
-  void display(void);
+  void flush(void);
 
 protected:
-  void ssd1306_command(uint8_t c);
   void ssd1306_command1(uint8_t c);
-  void ssd1306_commandList(const uint8_t *c, uint8_t n);
+  void ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM = true);
 
   TwoWire *wire;    ///< Initialized during construction when using I2C. See
                     ///< Wire.cpp, Wire.h
@@ -54,5 +50,3 @@ protected:
   uint8_t w, h;
   int8_t i2caddr;   ///< I2C address initialized when begin method is called.
 };
-
-#endif  // _Adafruit_SSD1306_H_
