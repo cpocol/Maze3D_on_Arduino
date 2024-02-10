@@ -121,26 +121,28 @@ int32_t Cast(int16_t angle, fptype& xHit, fptype& yHit) {
     }
 }
 
-void RenderColumn(int col, fptype h, int32_t textureColumn) {
-    fptype Dh_fp = (texRes << 6) / h; // 1 row in screen space is this many rows in texture space; use fixed point
-    fptype textureRow_fp = 0;
+void RenderColumn(int16_t col, int32_t h, int32_t textureColumn) {
+    int32_t Dh_fp = (texRes << 16) / h; // 1 row in screen space is this many rows in texture space; use fixed point
+    uint32_t textureRow_fp = 0;
     //int minRow = screenHh - h / 2; // no elevation
-    int minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100;
-    int maxRow = min(minRow + h, screenH);
+    int16_t minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100;
+    int16_t maxRow = min(minRow + h, screenH);
 
     if (minRow < 0) { // clip
-        textureRow_fp = -(minRow * Dh_fp);
+        textureRow_fp = int32_t(-minRow) * Dh_fp;
         minRow = 0;
     }
 
-    uint16_t textureOffsetInit = textureColumn * texRes; // huge speedup: 90 degs pre-rotated texture
     unsigned char* pScreen = screen + col;
-    const unsigned char* pTexture = Texture + textureOffsetInit;
+
+    uint16_t textureOffsetInit = textureColumn * texRes; // huge speedup: 90 degs pre-rotated texture
+    //const unsigned char* pTexture = Texture + textureOffsetInit;
     static unsigned char texCol[texRes];
     memcpy_P(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
-    for (int row = minRow; row < maxRow; row++) {
+    //memcpy(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
+    for (int8_t row = minRow; row < maxRow; row++) {
 #ifdef TEXTURE_1bpp // configured in "Generate Texture.cpp"
-        uint16_t textureOffset = textureOffsetInit + uint16_t(textureRow_fp >> 6);
+        uint16_t textureOffset = textureOffsetInit + uint16_t(textureRow_fp >> 16);
         uint16_t textureOffsetByte = textureOffset / 8;
         uint8_t textureOffsetBit = uint8_t(textureOffset) % 8;
 
@@ -148,10 +150,10 @@ void RenderColumn(int col, fptype h, int32_t textureColumn) {
         unsigned char pixelByte = pgm_read_byte_near(Texture + textureOffsetByte);
         unsigned char pixel = (pixelByte >> textureOffsetBit) & 1;
 #else
-        //unsigned char pixel = *(pTexture + uint16_t(textureRow_fp >> 6));
-        //unsigned char pixel = pgm_read_byte_near(pTexture + uint16_t(textureRow_fp >> 6));
+        //unsigned char pixel = *(pTexture + uint16_t(textureRow_fp >> 16));
+        //unsigned char pixel = pgm_read_byte_near(pTexture + uint16_t(textureRow_fp >> 16));
         //unsigned char pixel = 1;
-        unsigned char pixel = texCol[uint16_t(textureRow_fp >> 6)];
+        unsigned char pixel = texCol[uint16_t(textureRow_fp >> 16)];
 #endif
 
         unsigned char* screenAddr = pScreen + (row / 8) * screenW;
@@ -163,9 +165,9 @@ void RenderColumn(int col, fptype h, int32_t textureColumn) {
 
 void Render() {
     static long t_prev = millis();
-    static long t0 = millis();
+    long t0 = millis();
     memset(screen, 0, screenSize);
-    static long t1 = millis();   static int dt_clear = int(t1 - t0);   t0 = t1;
+    long t1 = millis();   int dt_clear = int(t1 - t0);   t0 = t1;
 
     uint16_t viewerToScreen_sq = sq(screenWh) * 3; // FOV = 60 degs => viewerToScreen = screenWh * sqrt(3)
     uint32_t textureColumn;
@@ -176,13 +178,13 @@ void Render() {
 
         textureColumn = ((xHit + yHit) % sqRes) * texRes / sqRes;
 
-        fptype dist_sq = sq(xC - xHit) + sq(yC - yHit) + 1; // +1 avoids division by zero
-        fptype h = fptype(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
+        int32_t dist_sq = sq(xC - xHit) + sq(yC - yHit) + 1; // +1 avoids division by zero
+        int32_t h = int32_t(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
         h = h / 4; // adjust until it looks fine
 
         RenderColumn(col, h, textureColumn);
     }
-    t1 = millis();   static int dt_render = int(t1 - t0);   t0 = t1;
+    t1 = millis();   int dt_render = int(t1 - t0);   t0 = t1;
 
     // mirror image; we need this because the map's CS is left handed while the ray casting works right handed
     for (int r = 0; r < (screenH + 7) / 8; r++)
@@ -191,12 +193,12 @@ void Render() {
             *(screen + r * screenW + col) = *(screen + r * screenW + screenW - 1 - col);
             *(screen + r * screenW + screenW - 1 - col) = aux;
         }
-    t1 = millis();   static int dt_mirror = int(t1 - t0);   t0 = t1;
+    t1 = millis();   int dt_mirror = int(t1 - t0);   t0 = t1;
 
     display.flush();
-    t1 = millis();   static int dt_flush = int(t1 - t0);   t0 = t1;
+    t1 = millis();   int dt_flush = int(t1 - t0);   t0 = t1;
 
-    static float FPS = 1000.f / (t1 - t_prev);
+    float FPS = 1000.f / (t1 - t_prev);
     Serial.print("FPS: ");         Serial.print(FPS);
     // Serial.print("   Clear: ");    Serial.print(dt_clear);
     Serial.print("   Render: ");   Serial.print(dt_render);

@@ -17,7 +17,7 @@ const int sqRes_pow2 = 10;
 const int sqRes = (1 << sqRes_pow2), sqResh = sqRes / 2;
 const float sqRes_f = float(sqRes);
 const fptype sqRes_fp = (fptype)sqRes << fp;
-const int safety_dist = 3; // to wall
+const int safety_dist = 30; // to wall
 
 // viewer Current position, orientation and elevation [%]
 extern int32_t xC, yC;

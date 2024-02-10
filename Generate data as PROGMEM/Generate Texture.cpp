@@ -5,8 +5,8 @@
 
 //#define TEXTURE_1bpp // 8bpp if not defined
 
-const int pow2 = 5;
-const int texRes = (1 << pow2);
+const unsigned int pow2 = 6;
+const unsigned int texRes = (1 << pow2);
 char Texture[texRes * texRes];
 
 int main()
@@ -14,7 +14,15 @@ int main()
     // generate texture
     for (int i = 0; i < texRes; i++)
         for (int j = 0; j < texRes; j++)
-            *(Texture + i * texRes + j) = ((0.1 * texRes < i) && (i < 0.7 * texRes) && (0.2 * texRes < j) && (j < 0.8 * texRes)) ? 0 : 1;
+            *(Texture + i * texRes + j) = ((0.1 * texRes < i) && (i < 0.5 * texRes) && (0.2 * texRes < j) && (j < 0.8 * texRes)) ? 0 : 1;
+
+    //pre-transpose it
+    for (int i = 0; i < texRes; i++)
+        for (int j = i + 1; j < texRes; j++) {
+            char aux = *(Texture + i * texRes + j);
+            *(Texture + i * texRes + j) = *(Texture + j * texRes + i);
+            *(Texture + j * texRes + i) = aux;
+        }
 
     // save to file
     FILE* fp = fopen("..\\Maze3D_on_ArduinoNano_src\\Texture.h", "w");
@@ -24,7 +32,7 @@ int main()
 #ifdef TEXTURE_1bpp
     fprintf(fp, "#define TEXTURE_1bpp // 8bpp if not defined\n\n");
 #endif
-    fprintf(fp, "const int32_t texRes = (1 << %d);\n\n", pow2);
+    fprintf(fp, "const uint32_t texRes = (1 << %d);\n\n", pow2);
     fprintf(fp, "const uint8_t PROGMEM Texture[] = {");
 
 #ifdef TEXTURE_1bpp
