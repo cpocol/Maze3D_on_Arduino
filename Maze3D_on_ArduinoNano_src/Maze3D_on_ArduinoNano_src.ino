@@ -122,14 +122,14 @@ int32_t Cast(int16_t angle, fptype& xHit, fptype& yHit) {
 }
 
 void RenderColumn(int16_t col, int32_t h, int32_t textureColumn) {
-    int32_t Dh_fp = (texRes << 16) / h; // 1 row in screen space is this many rows in texture space; use fixed point
+    uint32_t Dh_fp = (texRes << 16) / h; // 1 row in screen space is this many rows in texture space; use fixed point
     uint32_t textureRow_fp = 0;
     //int minRow = screenHh - h / 2; // no elevation
     int16_t minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100;
     int16_t maxRow = min(minRow + h, screenH);
 
     if (minRow < 0) { // clip
-        textureRow_fp = int32_t(-minRow) * Dh_fp;
+        textureRow_fp = uint32_t(-minRow) * Dh_fp;
         minRow = 0;
     }
 
@@ -140,7 +140,8 @@ void RenderColumn(int16_t col, int32_t h, int32_t textureColumn) {
     static unsigned char texCol[texRes];
     memcpy_P(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
     //memcpy(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
-    for (int8_t row = minRow; row < maxRow; row++) {
+    uint8_t maxRow8 = maxRow;
+    for (uint8_t row = minRow; row < maxRow8; row++) {
 #ifdef TEXTURE_1bpp // configured in "Generate Texture.cpp"
         uint16_t textureOffset = textureOffsetInit + uint16_t(textureRow_fp >> 16);
         uint16_t textureOffsetByte = textureOffset / 8;
@@ -153,6 +154,7 @@ void RenderColumn(int16_t col, int32_t h, int32_t textureColumn) {
         //unsigned char pixel = *(pTexture + uint16_t(textureRow_fp >> 16));
         //unsigned char pixel = pgm_read_byte_near(pTexture + uint16_t(textureRow_fp >> 16));
         //unsigned char pixel = 1;
+        //unsigned char pixel = texCol[*(((uint16_t*)&textureRow_fp) + 1)];
         unsigned char pixel = texCol[uint16_t(textureRow_fp >> 16)];
 #endif
 
@@ -179,8 +181,8 @@ void Render() {
         textureColumn = ((xHit + yHit) % sqRes) * texRes / sqRes;
 
         int32_t dist_sq = sq(xC - xHit) + sq(yC - yHit) + 1; // +1 avoids division by zero
+        dist_sq = dist_sq * 16; // adjust until it looks fine; the smaller this one, the taller the walls
         int32_t h = int32_t(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
-        h = h / 4; // adjust until it looks fine
 
         RenderColumn(col, h, textureColumn);
     }

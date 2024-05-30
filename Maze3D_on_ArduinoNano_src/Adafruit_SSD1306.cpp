@@ -36,7 +36,7 @@ void Adafruit_SSD1306::ssd1306_command1(uint8_t c) {
     @return None (void).
     @note
 */
-void Adafruit_SSD1306::ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM/* = true*/) {
+void Adafruit_SSD1306::ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM/* = true*/) {  // fromPROGMEM = false not working
     wire->beginTransmission(i2caddr);
     wire->write((uint8_t)0x00); // Co = 0, D/C = 0
     uint16_t bytesOut = 1;
@@ -144,12 +144,12 @@ bool Adafruit_SSD1306::begin(uint8_t addr) {
 */
 void Adafruit_SSD1306::flush(void) {
   TRANSACTION_START
-  static const uint8_t dlist1[] = {
+  static const uint8_t PROGMEM dlist1[] = {
       SSD1306_PAGEADDR,
       0,                      // Page start address
       0xFF,                   // Page end (not really, but works here)
       SSD1306_COLUMNADDR, 0}; // Column start address
-  ssd1306_commandList(dlist1, sizeof(dlist1), false);
+  ssd1306_commandList(dlist1, sizeof(dlist1)); // fromPROGMEM = false not working
   ssd1306_command1(w - 1); // Column end address
 
   uint16_t count = w * ((h + 7) / 8);

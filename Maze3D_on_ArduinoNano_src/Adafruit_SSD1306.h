@@ -41,7 +41,7 @@ public:
 
 protected:
   void ssd1306_command1(uint8_t c);
-  void ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM = true);
+  void ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM = true);  // fromPROGMEM = false not working
 
   TwoWire *wire;    ///< Initialized during construction when using I2C. See
                     ///< Wire.cpp, Wire.h
