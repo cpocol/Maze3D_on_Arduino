@@ -43,10 +43,10 @@ protected:
   void ssd1306_command1(uint8_t c);
   void ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM = true);  // fromPROGMEM = false not working
 
-  TwoWire *wire;    ///< Initialized during construction when using I2C. See
-                    ///< Wire.cpp, Wire.h
-  uint8_t *buffer;  ///< Buffer data used for display buffer. Allocated when
-                    ///< begin method is called.
+  TwoWire *wire;    ///< Initialized during construction when using I2C. See Wire.cpp, Wire.h
+  uint8_t *buffer;  ///< Buffer data used for display buffer. Allocated when begin method is called.
   uint8_t w, h;
   int8_t i2caddr;   ///< I2C address initialized when begin method is called.
+
+  friend void setup();
 };

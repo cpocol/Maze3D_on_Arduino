@@ -17,6 +17,7 @@
 int verticalAdvance = 0;
 int jumping = 0;
 int z = 0; // same unit as sqRes
+int maxJump_idx;
 
 void move(int32_t& x, int32_t& y, int16_t angle) {
     float rad = angle * 6.2831f / around;
