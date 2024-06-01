@@ -36,13 +36,13 @@ void move(int32_t& x, int32_t& y, int16_t angle) {
         if (wallID % 2 == 0) { // vertical wall ||
             x = xWall + safetyX;
             y = yTest;                          //                __
-            if (map(y / sqRes, x / sqRes) != 0) // it's a corner |
+            if (MAP(y / sqRes, x / sqRes) != 0) // it's a corner |
                 y = (yTest / sqRes - adjYMap) * sqRes + safetyY;
         }
         else { // horizontal wall ==
             x = xTest;
             y = yWall + safetyY;                //                __
-            if (map(y / sqRes, x / sqRes) != 0) // it's a corner |
+            if (MAP(y / sqRes, x / sqRes) != 0) // it's a corner |
                 x = (xTest / sqRes - adjXMap) * sqRes + safetyX;
         }
     }

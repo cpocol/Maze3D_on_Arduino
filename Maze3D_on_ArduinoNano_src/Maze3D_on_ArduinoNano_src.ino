@@ -21,12 +21,8 @@ const fptype mapSizeWidth_fp = (((fptype)mapSizeWidth) << fp), mapSizeHeight_fp 
 //initial
 int32_t xC = 1.5 * sqRes;
 int32_t yC = 1.5 * sqRes;
-int16_t angleC = 380;
+int16_t angleC = 80;
 int elevation_perc = 0; //as percentage from wall half height
-
-float X2Rad(int X) {
-    return (float)X * 3.1415f / aroundh;
-}
 
 void setup() {
     Serial.begin(250000);
@@ -69,7 +65,7 @@ int32_t CastX(int16_t angle, fptype& xHit_fp, fptype& yHit_fp) { // hit vertical
     yHit_fp = (((fptype)yC) << fp) + (x - xC) * tan_fp;
 
     while ((0 < x) && (x < mapSizeWidth) && (0 < yHit_fp) && (yHit_fp < mapSizeHeight_fp) &&
-           (map((yHit_fp >> fp) / sqRes, x / sqRes + adjXMap) == 0)) {
+           (MAP((yHit_fp >> fp) / sqRes, x / sqRes + adjXMap) == 0)) {
         x += dx;
         yHit_fp += dy_fp;
     }
@@ -98,7 +94,7 @@ int32_t CastY(int16_t angle, fptype& xHit_fp, fptype& yHit_fp) { // hit horizont
     xHit_fp = (((fptype)xC) << fp) + (y - yC) * ctan_fp;
 
     while ((0 < xHit_fp) && (xHit_fp < mapSizeWidth_fp) && (0 < y) && (y < mapSizeHeight) &&
-           (map(y / sqRes + adjYMap, (xHit_fp >> fp) / sqRes) == 0)) {
+           (MAP(y / sqRes + adjYMap, (xHit_fp >> fp) / sqRes) == 0)) {
         xHit_fp += dx_fp;
         y += dy;
     }
