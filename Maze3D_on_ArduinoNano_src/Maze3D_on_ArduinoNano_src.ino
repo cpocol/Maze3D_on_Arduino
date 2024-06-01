@@ -1,4 +1,4 @@
-#include "Adafruit_SSD1306.h"
+#include "I2C_Adafruit_SSD1306.h"
 
 #include "Config.h"
 #include "Controller.h"
@@ -10,7 +10,7 @@
 
 #define sq(x) ((x)*(x))
 
-Adafruit_SSD1306 display(screenW, screenH);
+I2C_Adafruit_SSD1306 display(screenW, screenH);
 
 const int screenSize = screenW * ((screenH + 7) / 8);
 uint8_t screen[screenSize];

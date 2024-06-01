@@ -1,13 +1,13 @@
-#include "Adafruit_SSD1306.h"
+#include "I2C_Adafruit_SSD1306.h"
 
-Adafruit_SSD1306::Adafruit_SSD1306(uint8_t w_, uint8_t h_)
+I2C_Adafruit_SSD1306::I2C_Adafruit_SSD1306(uint8_t w_, uint8_t h_)
     : wire(&Wire), buffer(NULL), w(w_), h(h_)
 {
 }
 
 // @brief Issue single command to SSD1306, using I2C. This is a protected function, not exposed (see ssd1306_command() instead).
 // @param c   the command character to send to the display. Refer to ssd1306 data sheet for commands
-void Adafruit_SSD1306::ssd1306_command1(uint8_t c) {
+void I2C_Adafruit_SSD1306::ssd1306_command1(uint8_t c) {
     wire->beginTransmission(i2caddr);
     wire->write((uint8_t)0x00); // Co = 0, D/C = 0
     wire->write(c);
@@ -17,7 +17,7 @@ void Adafruit_SSD1306::ssd1306_command1(uint8_t c) {
 // @brief Issue list of commands to SSD1306. This is a protected function, not exposed.
 // @param c   pointer to list of commands
 // @param n   number of commands in the list
-void Adafruit_SSD1306::ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM/* = true*/) {  // fromPROGMEM = false not working
+void I2C_Adafruit_SSD1306::ssd1306_commandList(const uint8_t *c, uint8_t n, bool fromPROGMEM/* = true*/) {  // fromPROGMEM = false not working
     wire->beginTransmission(i2caddr);
     wire->write((uint8_t)0x00); // Co = 0, D/C = 0
     uint16_t bytesOut = 1;
@@ -40,7 +40,7 @@ void Adafruit_SSD1306::ssd1306_commandList(const uint8_t *c, uint8_t n, bool fro
 // @param  addr   I2C address of corresponding SSD1306 display (or pass 0 to use default of 0x3C for 128x32 display, 0x3D for all others).
 // @return true on successful allocation/init, false otherwise. Well-behaved code should check the return value before proceeding.
 // @note   MUST call this function before any drawing or updates!
-bool Adafruit_SSD1306::begin(uint8_t addr) {
+bool I2C_Adafruit_SSD1306::begin(uint8_t addr) {
     if (!buffer)
         return false; //call setBuffer() first
 
@@ -53,7 +53,7 @@ bool Adafruit_SSD1306::begin(uint8_t addr) {
     // can accept different SDA/SCL pins, or if two SSD1306 instances
     // with different addresses -- only a single begin() is needed).
     wire->begin();
-    wire->setClock(1000000UL); // Maximum OK: 1 MHz, on some displays only 800 KHz
+    wire->setClock(800000UL); // Maximum OK: 1 MHz, on some displays only 800 KHz
 
     // Init sequence
     static const uint8_t PROGMEM init1[] = {SSD1306_DISPLAYOFF,         // 0xAE
@@ -110,7 +110,7 @@ bool Adafruit_SSD1306::begin(uint8_t addr) {
 // @brief  Push data currently in RAM to SSD1306 display.
 // @note   Drawing operations are not visible until this function is called. Call after each graphics command, or after a whole set
 //         of graphics commands, as best needed by one's own application.
-void Adafruit_SSD1306::flush(void) {
+void I2C_Adafruit_SSD1306::flush(void) {
   static const uint8_t PROGMEM dlist1[] = {
       SSD1306_PAGEADDR,
       0,                      // Page start address

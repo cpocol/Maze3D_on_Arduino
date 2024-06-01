@@ -30,9 +30,9 @@
 
 #define SSD1306_DEACTIVATE_SCROLL 0x2E                     ///< Stop scroll
 
-class Adafruit_SSD1306 {
+class I2C_Adafruit_SSD1306 {
 public:
-  Adafruit_SSD1306(uint8_t w_, uint8_t h_);
+  I2C_Adafruit_SSD1306(uint8_t w_, uint8_t h_);
 
   void setBuffer(uint8_t *buffer_) { buffer = buffer_; }
 
