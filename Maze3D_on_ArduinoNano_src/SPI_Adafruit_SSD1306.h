@@ -4,7 +4,6 @@
 
 typedef volatile uint8_t PortReg;
 typedef uint8_t PortMask;
-#define HAVE_PORTREG
 
 #define SSD1306_MEMORYMODE 0x20          ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21          ///< See datasheet
@@ -50,9 +49,6 @@ public:
 
   bool begin();
   void flush(void);
-  void ssd1306_command(uint8_t c);
-  bool getPixel(int16_t x, int16_t y);
-  uint8_t *getBuffer(void);
 
 protected:
   inline void SPIwrite(uint8_t d) __attribute__((always_inline));
@@ -65,19 +61,12 @@ protected:
 
   SPIClass *spi;   ///< Initialized during construction when using SPI. See
                    ///< SPI.cpp, SPI.h
-  int8_t vccstate; ///< VCC selection, set by begin method.
-  int8_t mosiPin;  ///< (Master Out Slave In) set when using SPI set during
-                   ///< construction.
-  int8_t clkPin;   ///< (Clock Pin) set when using SPI set during construction.
   int8_t dcPin;    ///< (Data Pin) set when using SPI set during construction.
   int8_t csPin;    ///< (Chip Select Pin) set when using SPI set during construction.
   int8_t rstPin;   ///< Display reset pin assignment. Set during construction.
 
-#ifdef HAVE_PORTREG
-  PortReg *mosiPort, *clkPort, *dcPort, *csPort;
-  PortMask mosiPinMask, clkPinMask, dcPinMask, csPinMask;
-#endif
+  PortReg *clkPort, *dcPort, *csPort;
+  PortMask dcPinMask, csPinMask;
 
-protected:
   SPISettings spiSettings;
 };

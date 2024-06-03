@@ -11,17 +11,7 @@
 #define SPI_TRANSACTION_START spi->beginTransaction(spiSettings) ///< Pre-SPI
 #define SPI_TRANSACTION_END spi->endTransaction()                ///< Post-SPI
 
-// The definition of 'transaction' is broadened a bit in the context of
-// this library -- referring not just to SPI transactions (if supported
-// in the version of the SPI library being used), but also chip select
-// (if SPI is being used, whether hardware or soft), and also to the
-// beginning and end of I2C transfers (the Wire clock may be sped up before
-// issuing data to the display, then restored to the default rate afterward
-// so other I2C device types still work).  All of these are encapsulated
-// in the TRANSACTION_* macros.
-
-// Check first if Wire, then hardware SPI, then soft SPI:
-#define TRANSACTION_START                                                      \
+#define TRANSACTION_START                                                    \
     SPI_TRANSACTION_START;                                                   \
     SSD1306_SELECT;
 
@@ -29,59 +19,39 @@
     SSD1306_DESELECT;                                                          \
     SPI_TRANSACTION_END;
 
-
-/*!
-    @brief  Constructor for SPI SSD1306 displays, using native hardware SPI.
-    @param  w
-            Display width in pixels
-    @param  h
-            Display height in pixels
-    @param  dc_pin
-            Data/command pin (using Arduino pin numbering), selects whether display is receiving commands (low) or data (high).
-    @param  rst_pin
-            Reset pin (using Arduino pin numbering), or -1 if not used (some displays might be wired to share the microcontroller's reset pin).
-    @param  cs_pin
-            Chip-select pin (using Arduino pin numbering) for sharing the bus with other devices. Active low.
-    @param  bitrate
-            SPI clock rate for transfers to this display. Default if unspecified is 8000000UL (8 MHz).
+/*! @brief  Constructor for SPI SSD1306 displays, using native hardware SPI.
+    @param  w Display width in pixels
+    @param  h Display height in pixels
+    @param  dc_pin Data/command pin (using Arduino pin numbering), selects whether display is receiving commands (low) or data (high).
+    @param  rst_pin Reset pin (using Arduino pin numbering), or -1 if not used (some displays might be wired to share the microcontroller's reset pin).
+    @param  cs_pin Chip-select pin (using Arduino pin numbering) for sharing the bus with other devices. Active low.
+    @param  bitrate SPI clock rate for transfers to this display. Default if unspecified is 8000000UL (8 MHz).
     @return Adafruit_SSD1306 object.
     @note   Call the object's begin() function before use
 */
 SPI_Adafruit_SSD1306::SPI_Adafruit_SSD1306(uint8_t w_, uint8_t h_, int8_t dc_pin, int8_t rst_pin, int8_t cs_pin, uint32_t bitrate)
-    : spi(&SPI),
-      buffer(NULL), w(w_), h(h_), mosiPin(-1), clkPin(-1), dcPin(dc_pin), csPin(cs_pin),
-      rstPin(rst_pin) {
-#ifdef SPI_HAS_TRANSACTION
-  spiSettings = SPISettings(bitrate, MSBFIRST, SPI_MODE0);
-#endif
+    : spi(&SPI), buffer(NULL), w(w_), h(h_), dcPin(dc_pin), csPin(cs_pin), rstPin(rst_pin) {
+    spiSettings = SPISettings(bitrate, MSBFIRST, SPI_MODE0);
 }
 
 // LOW-LEVEL UTILS ---------------------------------------------------------
 
 // Issue single byte out SPI, either soft or hardware as appropriate.
 // SPI transaction/selection must be performed in calling function.
-/*!
-    @brief  Write a single byte to the SPI port.
-
-    @param  d
-                        Data byte to be written.
-
+/*! @brief  Write a single byte to the SPI port.
+    @param  d Data byte to be written.
     @return void
     @note   See HAVE_PORTREG which defines if the method uses a port or bit-bang
    method
 */
 inline void SPI_Adafruit_SSD1306::SPIwrite(uint8_t d) {
-  spi->transfer(d);
+    spi->transfer(d);
 }
 
-/*!
-    @brief Issue single command to SSD1306, using I2C or hard/soft SPI as
+/*! @brief Issue single command to SSD1306, using I2C or hard/soft SPI as
    needed. Because command calls are often grouped, SPI transaction and
-   selection must be started/ended in calling function for efficiency. This is a
-   protected function, not exposed (see ssd1306_command() instead).
-
-        @param c
-                   the command character to send to the display.
+   selection must be started/ended in calling function for efficiency..
+        @param c   the command character to send to the display.
                    Refer to ssd1306 data sheet for commands
     @return None (void).
     @note
@@ -91,44 +61,22 @@ void SPI_Adafruit_SSD1306::ssd1306_command1(uint8_t c) {
     SPIwrite(c);
 }
 
-/*!
-    @brief Issue list of commands to SSD1306, same rules as above re:
+/*! @brief Issue list of commands to SSD1306, same rules as above re:
    transactions. This is a protected function, not exposed.
-        @param c
-                   pointer to list of commands
-
-        @param n
-                   number of commands in the list
-
+        @param c   pointer to list of commands
+        @param n   number of commands in the list
     @return None (void).
     @note
 */
 void SPI_Adafruit_SSD1306::ssd1306_commandList(const uint8_t *c, uint8_t n) {
     SSD1306_MODE_COMMAND
     while (n--)
-      SPIwrite(pgm_read_byte(c++));
-}
-
-// A public version of ssd1306_command1(), for existing user code that
-// might rely on that function. This encapsulates the command transfer
-// in a transaction start/end, similar to old library's handling of it.
-/*!
-    @brief  Issue a single low-level command directly to the SSD1306
-            display, bypassing the library.
-    @param  c
-            Command to issue (0x00 to 0xFF, see datasheet).
-    @return None (void).
-*/
-void SPI_Adafruit_SSD1306::ssd1306_command(uint8_t c) {
-  TRANSACTION_START
-  ssd1306_command1(c);
-  TRANSACTION_END
+        SPIwrite(pgm_read_byte(c++));
 }
 
 // INIT DISPLAY -------------------------------------------------
 
-/*!
-    @brief  Allocate RAM for image buffer, initialize peripherals and pins.
+/*! @brief  Allocate RAM for image buffer, initialize peripherals and pins.
     @param  vcs
             VCC selection. Pass SSD1306_SWITCHCAPVCC to generate the display
             voltage (step up) from the 3.3V source, or SSD1306_EXTERNALVCC
@@ -160,130 +108,115 @@ bool SPI_Adafruit_SSD1306::begin() {
     if (!buffer)
         return false; //call setBuffer() first
 
-  vccstate = SSD1306_SWITCHCAPVCC;
-  bool reset = true;
-  bool periphBegin = true;
+    int8_t vccstate = SSD1306_SWITCHCAPVCC;
+    bool reset = true;
+    bool periphBegin = true;
 
-  // Setup pin directions
+    // Setup pin directions
     pinMode(dcPin, OUTPUT); // Set data/command pin as output
     pinMode(csPin, OUTPUT); // Same for chip select
-#ifdef HAVE_PORTREG
+
     dcPort = (PortReg *)portOutputRegister(digitalPinToPort(dcPin));
     dcPinMask = digitalPinToBitMask(dcPin);
     csPort = (PortReg *)portOutputRegister(digitalPinToPort(csPin));
     csPinMask = digitalPinToBitMask(csPin);
-#endif
+
     SSD1306_DESELECT
-    if (spi) { // Hardware SPI
-      // SPI peripheral begin same as wire check above.
-      if (periphBegin)
+
+    if (periphBegin)
         spi->begin();
-    } else {                    // Soft SPI
-      pinMode(mosiPin, OUTPUT); // MOSI and SCLK outputs
-      pinMode(clkPin, OUTPUT);
-#ifdef HAVE_PORTREG
-      mosiPort = (PortReg *)portOutputRegister(digitalPinToPort(mosiPin));
-      mosiPinMask = digitalPinToBitMask(mosiPin);
-      clkPort = (PortReg *)portOutputRegister(digitalPinToPort(clkPin));
-      clkPinMask = digitalPinToBitMask(clkPin);
-      *clkPort &= ~clkPinMask; // Clock low
-#else
-      digitalWrite(clkPin, LOW); // Clock low
-#endif
+
+    // Reset SSD1306 if requested and reset pin specified in constructor
+    if (reset && (rstPin >= 0)) {
+        pinMode(rstPin, OUTPUT);
+        digitalWrite(rstPin, HIGH);
+        delay(1);                   // VDD goes high at start, pause for 1 ms
+        digitalWrite(rstPin, LOW);  // Bring reset low
+        delay(10);                  // Wait 10 ms
+        digitalWrite(rstPin, HIGH); // Bring out of reset
     }
 
-  // Reset SSD1306 if requested and reset pin specified in constructor
-  if (reset && (rstPin >= 0)) {
-    pinMode(rstPin, OUTPUT);
-    digitalWrite(rstPin, HIGH);
-    delay(1);                   // VDD goes high at start, pause for 1 ms
-    digitalWrite(rstPin, LOW);  // Bring reset low
-    delay(10);                  // Wait 10 ms
-    digitalWrite(rstPin, HIGH); // Bring out of reset
-  }
+    TRANSACTION_START
 
-  TRANSACTION_START
+    // Init sequence
+    static const uint8_t PROGMEM init1[] = {SSD1306_DISPLAYOFF,         // 0xAE
+                                            SSD1306_SETDISPLAYCLOCKDIV, // 0xD5
+                                            0x80, // the suggested ratio 0x80
+                                            SSD1306_SETMULTIPLEX}; // 0xA8
+    ssd1306_commandList(init1, sizeof(init1));
+    ssd1306_command1(h - 1);
 
-  // Init sequence
-  static const uint8_t PROGMEM init1[] = {SSD1306_DISPLAYOFF,         // 0xAE
-                                          SSD1306_SETDISPLAYCLOCKDIV, // 0xD5
-                                          0x80, // the suggested ratio 0x80
-                                          SSD1306_SETMULTIPLEX}; // 0xA8
-  ssd1306_commandList(init1, sizeof(init1));
-  ssd1306_command1(h - 1);
+    static const uint8_t PROGMEM init2[] = {SSD1306_SETDISPLAYOFFSET, // 0xD3
+                                            0x0,                      // no offset
+                                            SSD1306_SETSTARTLINE | 0x0, // line #0
+                                            SSD1306_CHARGEPUMP};        // 0x8D
+    ssd1306_commandList(init2, sizeof(init2));
 
-  static const uint8_t PROGMEM init2[] = {SSD1306_SETDISPLAYOFFSET, // 0xD3
-                                          0x0,                      // no offset
-                                          SSD1306_SETSTARTLINE | 0x0, // line #0
-                                          SSD1306_CHARGEPUMP};        // 0x8D
-  ssd1306_commandList(init2, sizeof(init2));
+    ssd1306_command1((vccstate == SSD1306_EXTERNALVCC) ? 0x10 : 0x14);
 
-  ssd1306_command1((vccstate == SSD1306_EXTERNALVCC) ? 0x10 : 0x14);
+    static const uint8_t PROGMEM init3[] = {SSD1306_MEMORYMODE, // 0x20
+                                            0x00, // 0x0 act like ks0108
+                                            SSD1306_SEGREMAP | 0x1,
+                                            SSD1306_COMSCANDEC};
+    ssd1306_commandList(init3, sizeof(init3));
 
-  static const uint8_t PROGMEM init3[] = {SSD1306_MEMORYMODE, // 0x20
-                                          0x00, // 0x0 act like ks0108
-                                          SSD1306_SEGREMAP | 0x1,
-                                          SSD1306_COMSCANDEC};
-  ssd1306_commandList(init3, sizeof(init3));
+    uint8_t comPins = 0x02;
+    uint8_t contrast = 0x8F;
 
-  uint8_t comPins = 0x02;
-  uint8_t contrast = 0x8F;
+    if ((w == 128) && (h == 32)) {
+        comPins = 0x02;
+        contrast = 0x8F;
+    } else if ((w == 128) && (h == 64)) {
+        comPins = 0x12;
+        contrast = (vccstate == SSD1306_EXTERNALVCC) ? 0x9F : 0xCF;
+    } else if ((w == 96) && (h == 16)) {
+        comPins = 0x2; // ada x12
+        contrast = (vccstate == SSD1306_EXTERNALVCC) ? 0x10 : 0xAF;
+    } else {
+        // Other screen varieties -- TBD
+    }
 
-  if ((w == 128) && (h == 32)) {
-    comPins = 0x02;
-    contrast = 0x8F;
-  } else if ((w == 128) && (h == 64)) {
-    comPins = 0x12;
-    contrast = (vccstate == SSD1306_EXTERNALVCC) ? 0x9F : 0xCF;
-  } else if ((w == 96) && (h == 16)) {
-    comPins = 0x2; // ada x12
-    contrast = (vccstate == SSD1306_EXTERNALVCC) ? 0x10 : 0xAF;
-  } else {
-    // Other screen varieties -- TBD
-  }
+    ssd1306_command1(SSD1306_SETCOMPINS);
+    ssd1306_command1(comPins);
+    ssd1306_command1(SSD1306_SETCONTRAST);
+    ssd1306_command1(contrast);
 
-  ssd1306_command1(SSD1306_SETCOMPINS);
-  ssd1306_command1(comPins);
-  ssd1306_command1(SSD1306_SETCONTRAST);
-  ssd1306_command1(contrast);
+    ssd1306_command1(SSD1306_SETPRECHARGE); // 0xd9
+    ssd1306_command1((vccstate == SSD1306_EXTERNALVCC) ? 0x22 : 0xF1);
+    static const uint8_t PROGMEM init5[] = {
+        SSD1306_SETVCOMDETECT, // 0xDB
+        0x40,
+        SSD1306_DISPLAYALLON_RESUME, // 0xA4
+        SSD1306_NORMALDISPLAY,       // 0xA6
+        SSD1306_DEACTIVATE_SCROLL,
+        SSD1306_DISPLAYON}; // Main screen turn on
+    ssd1306_commandList(init5, sizeof(init5));
 
-  ssd1306_command1(SSD1306_SETPRECHARGE); // 0xd9
-  ssd1306_command1((vccstate == SSD1306_EXTERNALVCC) ? 0x22 : 0xF1);
-  static const uint8_t PROGMEM init5[] = {
-      SSD1306_SETVCOMDETECT, // 0xDB
-      0x40,
-      SSD1306_DISPLAYALLON_RESUME, // 0xA4
-      SSD1306_NORMALDISPLAY,       // 0xA6
-      SSD1306_DEACTIVATE_SCROLL,
-      SSD1306_DISPLAYON}; // Main screen turn on
-  ssd1306_commandList(init5, sizeof(init5));
+    TRANSACTION_END
 
-  TRANSACTION_END
-
-  return true; // Success
+    return true; // Success
 }
 
-/*!
-    @brief  Push data currently in RAM to SSD1306 display.
+/*! @brief  Push data currently in RAM to SSD1306 display.
     @return None (void).
     @note   Drawing operations are not visible until this function is
             called. Call after each graphics command, or after a whole set
             of graphics commands, as best needed by one's own application.
 */
 void SPI_Adafruit_SSD1306::flush(void) {
-  TRANSACTION_START
-  static const uint8_t PROGMEM dlist1[] = {
-      SSD1306_PAGEADDR,
-      0,                      // Page start address
-      0xFF,                   // Page end (not really, but works here)
-      SSD1306_COLUMNADDR, 0}; // Column start address
-  ssd1306_commandList(dlist1, sizeof(dlist1));
-  ssd1306_command1(w - 1); // Column end address
+    TRANSACTION_START
+    static const uint8_t PROGMEM dlist1[] = {
+        SSD1306_PAGEADDR,
+        0,                      // Page start address
+        0xFF,                   // Page end (not really, but works here)
+        SSD1306_COLUMNADDR, 0}; // Column start address
+    ssd1306_commandList(dlist1, sizeof(dlist1));
+    ssd1306_command1(w - 1); // Column end address
 
-  uint16_t count = w * ((h + 7) / 8);
-  uint8_t *ptr = buffer;
-  SSD1306_MODE_DATA
-  while (count--)
-    SPIwrite(*ptr++);
-  TRANSACTION_END
+    uint16_t count = w * ((h + 7) / 8);
+    uint8_t *ptr = buffer;
+    SSD1306_MODE_DATA
+    while (count--)
+        SPIwrite(*ptr++);
+    TRANSACTION_END
 }
