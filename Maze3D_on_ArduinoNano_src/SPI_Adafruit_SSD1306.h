@@ -2,34 +2,9 @@
 
 #include <SPI.h>
 
-#if defined(__AVR__)
 typedef volatile uint8_t PortReg;
 typedef uint8_t PortMask;
 #define HAVE_PORTREG
-#elif defined(__SAM3X8E__)
-typedef volatile RwReg PortReg;
-typedef uint32_t PortMask;
-#define HAVE_PORTREG
-#elif (defined(__arm__) || defined(ARDUINO_FEATHER52)) &&                      \
-    !defined(ARDUINO_ARCH_MBED) && !defined(ARDUINO_ARCH_RP2040)
-typedef volatile uint32_t PortReg;
-typedef uint32_t PortMask;
-#define HAVE_PORTREG
-#endif
-
-/// The following "raw" color names are kept for backwards client compatability
-/// They can be disabled by predefining this macro before including the Adafruit
-/// header client code will then need to be modified to use the scoped enum
-/// values directly
-#ifndef NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
-#define BLACK SSD1306_BLACK     ///< Draw 'off' pixels
-#define WHITE SSD1306_WHITE     ///< Draw 'on' pixels
-#define INVERSE SSD1306_INVERSE ///< Invert pixels
-#endif
-/// fit into the SSD1306_ naming scheme
-#define SSD1306_BLACK 0   ///< Draw 'off' pixels
-#define SSD1306_WHITE 1   ///< Draw 'on' pixels
-#define SSD1306_INVERSE 2 ///< Invert pixels
 
 #define SSD1306_MEMORYMODE 0x20          ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21          ///< See datasheet
@@ -67,21 +42,13 @@ typedef uint32_t PortMask;
 #define SSD1306_ACTIVATE_SCROLL 0x2F                      ///< Start scroll
 #define SSD1306_SET_VERTICAL_SCROLL_AREA 0xA3             ///< Set scroll range
 
-
-/*!
-    @brief  Class that stores state and functions for interacting with
-            SSD1306 OLED displays.
-*/
 class SPI_Adafruit_SSD1306 {
 public:
-  // NEW CONSTRUCTORS -- recommended for new projects
-  SPI_Adafruit_SSD1306(uint8_t w_, uint8_t h_, SPIClass *spi, int8_t dc_pin,
-                   int8_t rst_pin, int8_t cs_pin, uint32_t bitrate = 8000000UL);
+  SPI_Adafruit_SSD1306(uint8_t w_, uint8_t h_, int8_t dc_pin, int8_t rst_pin, int8_t cs_pin, uint32_t bitrate = 8000000UL);
 
   void setBuffer(uint8_t *buffer_) { buffer = buffer_; }
 
-  bool begin(uint8_t switchvcc = SSD1306_SWITCHCAPVCC, uint8_t i2caddr = 0,
-             bool reset = true, bool periphBegin = true);
+  bool begin();
   void flush(void);
   void ssd1306_command(uint8_t c);
   bool getPixel(int16_t x, int16_t y);
@@ -110,10 +77,7 @@ protected:
   PortReg *mosiPort, *clkPort, *dcPort, *csPort;
   PortMask mosiPinMask, clkPinMask, dcPinMask, csPinMask;
 #endif
-  uint8_t contrast; ///< normal contrast setting for this device
-#if defined(SPI_HAS_TRANSACTION)
+
 protected:
-  // Allow sub-class to change
   SPISettings spiSettings;
-#endif
 };

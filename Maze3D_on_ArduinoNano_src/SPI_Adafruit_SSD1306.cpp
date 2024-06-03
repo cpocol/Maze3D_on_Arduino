@@ -1,44 +1,15 @@
-#ifdef __AVR__
 #include <avr/pgmspace.h>
-#elif defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040)
-#include <pgmspace.h>
-#else
-#define pgm_read_byte(addr)                                                    \
-  (*(const unsigned char *)(addr)) ///< PROGMEM workaround for non-AVR
-#endif
-
-#if !defined(__ARM_ARCH) && !defined(ENERGIA) && !defined(ESP8266) &&          \
-    !defined(ESP32) && !defined(__arc__)
-#include <util/delay.h>
-#endif
 
 #include "SPI_Adafruit_SSD1306.h"
 
 // SOME DEFINES AND STATIC VARIABLES USED INTERNALLY -----------------------
-
-#define ssd1306_swap(a, b)                                                     \
-  (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b))) ///< No-temp-var swap operation
-
-
-#ifdef HAVE_PORTREG
 #define SSD1306_SELECT *csPort &= ~csPinMask;       ///< Device select
 #define SSD1306_DESELECT *csPort |= csPinMask;      ///< Device deselect
 #define SSD1306_MODE_COMMAND *dcPort &= ~dcPinMask; ///< Command mode
 #define SSD1306_MODE_DATA *dcPort |= dcPinMask;     ///< Data mode
-#else
-#define SSD1306_SELECT digitalWrite(csPin, LOW);       ///< Device select
-#define SSD1306_DESELECT digitalWrite(csPin, HIGH);    ///< Device deselect
-#define SSD1306_MODE_COMMAND digitalWrite(dcPin, LOW); ///< Command mode
-#define SSD1306_MODE_DATA digitalWrite(dcPin, HIGH);   ///< Data mode
-#endif
 
-#if defined(SPI_HAS_TRANSACTION)
 #define SPI_TRANSACTION_START spi->beginTransaction(spiSettings) ///< Pre-SPI
 #define SPI_TRANSACTION_END spi->endTransaction()                ///< Post-SPI
-#else // SPI transactions likewise not present in older Arduino SPI lib
-#define SPI_TRANSACTION_START ///< Dummy stand-in define
-#define SPI_TRANSACTION_END   ///< keeps compiler happy
-#endif
 
 // The definition of 'transaction' is broadened a bit in the context of
 // this library -- referring not just to SPI transactions (if supported
@@ -58,8 +29,6 @@
     SSD1306_DESELECT;                                                          \
     SPI_TRANSACTION_END;
 
-// CONSTRUCTORS, DESTRUCTOR ------------------------------------------------
-
 
 /*!
     @brief  Constructor for SPI SSD1306 displays, using native hardware SPI.
@@ -67,30 +36,19 @@
             Display width in pixels
     @param  h
             Display height in pixels
-    @param  spi_ptr
-            Pointer to an existing SPIClass instance (e.g. &SPI, the
-            microcontroller's primary SPI bus).
     @param  dc_pin
-            Data/command pin (using Arduino pin numbering), selects whether
-            display is receiving commands (low) or data (high).
+            Data/command pin (using Arduino pin numbering), selects whether display is receiving commands (low) or data (high).
     @param  rst_pin
-            Reset pin (using Arduino pin numbering), or -1 if not used
-            (some displays might be wired to share the microcontroller's
-            reset pin).
+            Reset pin (using Arduino pin numbering), or -1 if not used (some displays might be wired to share the microcontroller's reset pin).
     @param  cs_pin
-            Chip-select pin (using Arduino pin numbering) for sharing the
-            bus with other devices. Active low.
+            Chip-select pin (using Arduino pin numbering) for sharing the bus with other devices. Active low.
     @param  bitrate
-            SPI clock rate for transfers to this display. Default if
-            unspecified is 8000000UL (8 MHz).
+            SPI clock rate for transfers to this display. Default if unspecified is 8000000UL (8 MHz).
     @return Adafruit_SSD1306 object.
-    @note   Call the object's begin() function before use -- buffer
-            allocation is performed there!
+    @note   Call the object's begin() function before use
 */
-SPI_Adafruit_SSD1306::SPI_Adafruit_SSD1306(uint8_t w_, uint8_t h_, SPIClass *spi_ptr,
-                                   int8_t dc_pin, int8_t rst_pin, int8_t cs_pin,
-                                   uint32_t bitrate)
-    : spi(spi_ptr ? spi_ptr : &SPI),
+SPI_Adafruit_SSD1306::SPI_Adafruit_SSD1306(uint8_t w_, uint8_t h_, int8_t dc_pin, int8_t rst_pin, int8_t cs_pin, uint32_t bitrate)
+    : spi(&SPI),
       buffer(NULL), w(w_), h(h_), mosiPin(-1), clkPin(-1), dcPin(dc_pin), csPin(cs_pin),
       rstPin(rst_pin) {
 #ifdef SPI_HAS_TRANSACTION
@@ -167,7 +125,7 @@ void SPI_Adafruit_SSD1306::ssd1306_command(uint8_t c) {
   TRANSACTION_END
 }
 
-// ALLOCATE & INIT DISPLAY -------------------------------------------------
+// INIT DISPLAY -------------------------------------------------
 
 /*!
     @brief  Allocate RAM for image buffer, initialize peripherals and pins.
@@ -176,12 +134,6 @@ void SPI_Adafruit_SSD1306::ssd1306_command(uint8_t c) {
             voltage (step up) from the 3.3V source, or SSD1306_EXTERNALVCC
             otherwise. Most situations with Adafruit SSD1306 breakouts will
             want SSD1306_SWITCHCAPVCC.
-    @param  addr
-            I2C address of corresponding SSD1306 display (or pass 0 to use
-            default of 0x3C for 128x32 display, 0x3D for all others).
-            SPI displays (hardware or software) do not use addresses, but
-            this argument is still required (pass 0 or any value really,
-            it will simply be ignored). Default if unspecified is 0.
     @param  reset
             If true, and if the reset pin passed to the constructor is
             valid, a hard reset will be performed before initializing the
@@ -204,13 +156,13 @@ void SPI_Adafruit_SSD1306::ssd1306_command(uint8_t c) {
             proceeding.
     @note   MUST call this function before any drawing or updates!
 */
-bool SPI_Adafruit_SSD1306::begin(uint8_t vcs, uint8_t addr, bool reset,
-                             bool periphBegin) {
-
+bool SPI_Adafruit_SSD1306::begin() {
     if (!buffer)
         return false; //call setBuffer() first
 
-  vccstate = vcs;
+  vccstate = SSD1306_SWITCHCAPVCC;
+  bool reset = true;
+  bool periphBegin = true;
 
   // Setup pin directions
     pinMode(dcPin, OUTPUT); // Set data/command pin as output
@@ -275,7 +227,7 @@ bool SPI_Adafruit_SSD1306::begin(uint8_t vcs, uint8_t addr, bool reset,
   ssd1306_commandList(init3, sizeof(init3));
 
   uint8_t comPins = 0x02;
-  contrast = 0x8F;
+  uint8_t contrast = 0x8F;
 
   if ((w == 128) && (h == 32)) {
     comPins = 0x02;
