@@ -25,7 +25,7 @@ int main()
         }
 
     // save to file
-    FILE* fp = fopen("..\\Maze3D_on_ArduinoNano_src\\Texture.h", "w");
+    FILE* fp = fopen("..\\Maze3D_on_Arduino_src\\Texture.h", "w");
     if (!fp)
         printf("error");
 

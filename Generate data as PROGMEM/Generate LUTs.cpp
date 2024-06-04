@@ -43,7 +43,7 @@ int main()
     }
 
     // save to file
-    FILE* fp = fopen("..\\Maze3D_on_ArduinoNano\\LUTs.h", "w");
+    FILE* fp = fopen("..\\Maze3D_on_Arduino_src\\LUTs.h", "w");
     if (!fp)
         printf("error");
 
