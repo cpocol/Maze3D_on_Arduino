@@ -11,18 +11,17 @@
 #define sq(x) ((x)*(x))
 
 #ifdef USE_I2C
-#include "I2C_Adafruit_SSD1306.h"
-I2C_Adafruit_SSD1306 display(screenW, screenH);
-
+  #include "I2C_Adafruit_SSD1306.h"
+  I2C_Adafruit_SSD1306 display(screenW, screenH);
 #else
-#include "SPI_Adafruit_SSD1306.h"
-// Arduino Mega default SPI pins:
-// 50(CIPO) - not used for SSD1306
-// 51(COPI)
-// 52(SCK)
-#define OLED_RESET  40
-#define OLED_DC     38
-#define OLED_CS     36
+  #include "SPI_Adafruit_SSD1306.h"
+  // Arduino Mega default SPI pins:
+  // 50(CIPO) - not used for SSD1306
+  // 51(COPI)
+  // 52(SCK)
+  #define OLED_RESET   5
+  #define OLED_DC      4
+  #define OLED_CS      3
 SPI_Adafruit_SSD1306 display(screenW, screenH, OLED_DC, OLED_RESET, OLED_CS, 8000000UL);
 #endif
 
@@ -64,29 +63,32 @@ int32_t CastX(int16_t angle, fptype& xHit_fp, fptype& yHit_fp) { // hit vertical
     if ((angle == aroundq) || (angle == around3q))
         return -1; // CastY() will hit a wall correctly
 
-    // prepare as for 1st or 4th quadrant
-    fptype x = (xC / sqRes) * sqRes + sqRes;
-    fptype dx = sqRes,   adjXMap = 0;
+    // prepare as for 1st or 4th quadrant (looking estward)
+    int xMap = (xC >> sqRes_pow2) + 1;
+    fptype dxMap = 1,    adjXMap = 0;
     fptype tan_fp = (fptype) pgm_read_dword_near(Tan_fp + angle / screenW_lowResFactor);
     fptype dy_fp = sqRes * tan_fp;
     // 2nd or 3rd quadrant
     if ((aroundq < angle) && (angle < around3q)) {
-        x -= sqRes;
+        xMap--;
+        dxMap = -1;
         adjXMap = -1;
-        dx = -dx;
         dy_fp = -dy_fp;
     }
-    yHit_fp = (((fptype)yC) << fp) + (x - xC) * tan_fp;
+    yHit_fp = (((fptype)yC) << fp) + ((xMap << sqRes_pow2) - xC) * tan_fp;
 
-    while ((0 < x) && (x < mapSizeWidth) && (0 < yHit_fp) && (yHit_fp < mapSizeHeight_fp) &&
-           (MAP((yHit_fp >> fp) / sqRes, x / sqRes + adjXMap) == 0)) {
-        x += dx;
+    xMap += adjXMap;
+    int yMap = yHit_fp >> (fp + sqRes_pow2);
+    while ((0 < yHit_fp) && (yHit_fp < mapSizeHeight_fp) && (0 < xMap) && (xMap < mapWidth) && //works much slower without checking x, although it shouldn't be done if the map is well closed
+           (MAP(yMap, xMap) == 0)) {
+        xMap += dxMap;
         yHit_fp += dy_fp;
+        yMap = yHit_fp >> (fp + sqRes_pow2);
     }
 
-    xHit_fp = x << fp;
+    xHit_fp = (xMap - adjXMap) << (sqRes_pow2 + fp);
 
-    return int32_t((yHit_fp / sqRes_fp) * mapWidth + (x / sqRes + adjXMap));
+    return int32_t(yMap * mapWidth + xMap);
 }
 
 // returns wall ID (as map position and cell face)
@@ -94,28 +96,35 @@ int32_t CastY(int16_t angle, fptype& xHit_fp, fptype& yHit_fp) { // hit horizont
     if ((angle == 0) || (angle == aroundh))
         return -1; // CastX() will hit a wall correctly
 
-    // prepare as for 1st or 2nd quadrant
+    // prepare as for 1st or 2nd quadrant (lookog southward)
+    int yMap = (yC >> sqRes_pow2) + 1;
     fptype y = (yC / sqRes) * sqRes + sqRes;
-    fptype dy = sqRes,   adjYMap = 0;
+    fptype dyMap = 1,    dy = sqRes,   adjYMap = 0;
     fptype ctan_fp = (fptype) pgm_read_dword_near(CTan_fp + angle / screenW_lowResFactor);
     fptype dx_fp = sqRes * ctan_fp;
-    if (angle > aroundh) { // 3rd or 4th quadrants
+    if (angle > aroundh) { // 3rd or 4th quadrants (looking northward)
+        yMap--;
+        dyMap = -1;
         y -= sqRes;
         adjYMap = -1;
         dy = -dy;
         dx_fp = -dx_fp;
     }
-    xHit_fp = (((fptype)xC) << fp) + (y - yC) * ctan_fp;
+    xHit_fp = (((fptype)xC) << fp) + ((yMap << sqRes_pow2) - yC) * ctan_fp;
 
-    while ((0 < xHit_fp) && (xHit_fp < mapSizeWidth_fp) && (0 < y) && (y < mapSizeHeight) &&
-           (MAP(y / sqRes + adjYMap, (xHit_fp >> fp) / sqRes) == 0)) {
+    yMap += adjYMap;
+    int xMap = xHit_fp >> (fp + sqRes_pow2);
+    while ((0 < xHit_fp) && (xHit_fp < mapSizeWidth_fp) && (0 < y) && (y < mapSizeHeight) && //works much slower without checking y, although it shouldn't be done if the map is well closed
+           (MAP(yMap, xMap) == 0)) {
         xHit_fp += dx_fp;
         y += dy;
+        yMap += dyMap;
+        xMap = xHit_fp >> (fp + sqRes_pow2);
     }
 
-    yHit_fp = y << fp;
+    yHit_fp = (yMap - adjYMap) << (sqRes_pow2 + fp);
 
-    return int32_t((y / sqRes + adjYMap) * mapWidth + (xHit_fp / sqRes_fp));
+    return int32_t(yMap * mapWidth + xMap);
 }
 
 // returns wall ID (as map position and cell face)
@@ -152,9 +161,10 @@ void RenderColumn(int16_t col, int32_t h, int32_t textureColumn) {
 
     uint16_t textureOffsetInit = textureColumn * texRes; // huge speedup: 90 degs pre-rotated texture
     //const unsigned char* pTexture = Texture + textureOffsetInit;
+#ifndef TEXTURE_1bpp
     static unsigned char texCol[texRes];
     memcpy_P(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
-    //memcpy(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
+#endif
     uint8_t maxRow8 = maxRow;
     for (uint8_t row = minRow; row < maxRow8; row++) {
 #ifdef TEXTURE_1bpp // configured in "Generate Texture.cpp"
@@ -196,7 +206,7 @@ void Render() {
         textureColumn = ((xHit + yHit) % sqRes) * texRes / sqRes;
 
         int32_t dist_sq = sq(xC - xHit) + sq(yC - yHit) + 1; // +1 avoids division by zero
-        dist_sq = dist_sq * 16; // adjust until it looks fine; the smaller this one, the taller the walls
+        dist_sq = dist_sq * 2; // adjust until it looks fine; the smaller this one, the taller the walls
         int32_t h = int32_t(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
 
         RenderColumn(col, h, textureColumn);
@@ -216,7 +226,7 @@ void Render() {
     t1 = millis();   int dt_flush = int(t1 - t0);   t0 = t1;
 
     float FPS = 1000.f / (t1 - t_prev);
-    // Serial.print("FPS: ");         Serial.print(FPS);
+    Serial.print("FPS: ");         Serial.print(FPS);
     // // Serial.print("   Clear: ");    Serial.print(dt_clear);
     Serial.print("   Render: ");   Serial.print(dt_render);
     // //Serial.print("   Mirror: ");   Serial.print(dt_mirror);
