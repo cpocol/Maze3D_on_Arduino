@@ -1,5 +1,5 @@
-#define mapWidth 14
-#define mapHeight 16
+#define mapWidth 16
+#define mapHeight 14
 
 extern const int8_t Map[mapHeight][mapWidth];
 

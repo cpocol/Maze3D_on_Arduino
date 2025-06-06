@@ -5,7 +5,7 @@
 
 //#define TEXTURE_1bpp // 8bpp if not defined
 
-const unsigned int pow2 = 6;
+const unsigned int pow2 = 4; //there is no observable visual improvement for pow2 greater than 4
 const unsigned int texRes = (1 << pow2);
 char Texture[texRes * texRes];
 
@@ -32,8 +32,9 @@ int main()
 #ifdef TEXTURE_1bpp
     fprintf(fp, "#define TEXTURE_1bpp // 8bpp if not defined\n\n");
 #endif
-    fprintf(fp, "const uint32_t texRes = (1 << %d);\n\n", pow2);
-    fprintf(fp, "const uint8_t PROGMEM Texture[] = {");
+    fprintf(fp, "const uint8_t texRes_pow2 = %d;\n", pow2);
+    fprintf(fp, "const uint8_t texRes = (1 << texRes_pow2);\n\n");
+    fprintf(fp, "const uint8_t Texture[] = {");
 
 #ifdef TEXTURE_1bpp
     // save as binary

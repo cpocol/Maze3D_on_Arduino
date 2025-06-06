@@ -1,3 +1,10 @@
 *.o
 *.exe
 plan.txt
+
+.vs
+.theia
+x64
+
+~$*
+*.vcxproj.user

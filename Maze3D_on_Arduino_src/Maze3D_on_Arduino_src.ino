@@ -59,135 +59,145 @@ void setup() {
 }
 
 //returns wall ID (as map position and cell face)
-int32_t CastX(int16_t angle, fptype& xHit_fp, fptype& yHit_fp) { // hit vertical walls ||
+TCastResponse_fp CastX(int16_t angle) { // hit vertical walls ||
+    TCastResponse_fp result;
+    result.xHit_fp = 1000000000;
     if ((angle == aroundq) || (angle == around3q))
-        return -1; // CastY() will hit a wall correctly
+        return result; // CastY() will hit a wall correctly
 
     // prepare as for 1st or 4th quadrant (looking estward)
-    int xMap = (xC >> sqRes_pow2) + 1;
+    result.xMap = (xC >> sqRes_pow2) + 1;
     fptype dxMap = 1,    adjXMap = 0;
     fptype tan_fp = (fptype) pgm_read_dword_near(Tan_fp + angle / screenW_lowResFactor);
     fptype dy_fp = sqRes * tan_fp;
     // 2nd or 3rd quadrant
     if ((aroundq < angle) && (angle < around3q)) {
-        xMap--;
+        result.xMap--;
         dxMap = -1;
         adjXMap = -1;
         dy_fp = -dy_fp;
     }
-    yHit_fp = (((fptype)yC) << fp) + ((xMap << sqRes_pow2) - xC) * tan_fp;
+    result.yHit_fp = (((fptype)yC) << fp) + ((result.xMap << sqRes_pow2) - xC) * tan_fp;
 
-    xMap += adjXMap;
-    int yMap = yHit_fp >> (fp + sqRes_pow2);
-    while ((0 < yHit_fp) && (yHit_fp < mapSizeHeight_fp) && (0 < xMap) && (xMap < mapWidth) && //works much slower without checking x, although it shouldn't be done if the map is well closed
-           (MAP(yMap, xMap) == 0)) {
-        xMap += dxMap;
-        yHit_fp += dy_fp;
-        yMap = yHit_fp >> (fp + sqRes_pow2);
+    result.xMap += adjXMap;
+    result.yMap = result.yHit_fp >> (fp + sqRes_pow2);
+    while ((0 < result.yHit_fp) && (result.yHit_fp < mapSizeHeight_fp) && (0 < result.xMap) && (result.xMap < mapWidth) && //works much slower without checking x, although it shouldn't be done if the map is well closed
+           (MAP(result.yMap, result.xMap) == 0)) {
+        result.yHit_fp += dy_fp;
+        result.xMap += dxMap;
+        result.yMap = result.yHit_fp >> (fp + sqRes_pow2);
     }
 
-    xHit_fp = (xMap - adjXMap) << (sqRes_pow2 + fp);
+    result.xHit_fp = (result.xMap - adjXMap) << (sqRes_pow2 + fp);
 
-    return int32_t(yMap * mapWidth + xMap);
+    return result;
 }
 
 // returns wall ID (as map position and cell face)
-int32_t CastY(int16_t angle, fptype& xHit_fp, fptype& yHit_fp) { // hit horizontal walls ==
+TCastResponse_fp CastY(int16_t angle) { // hit horizontal walls ==
+    TCastResponse_fp result;
     if ((angle == 0) || (angle == aroundh))
-        return -1; // CastX() will hit a wall correctly
+        return result; // CastX() will hit a wall correctly
 
     // prepare as for 1st or 2nd quadrant (lookog southward)
-    int yMap = (yC >> sqRes_pow2) + 1;
-    fptype y = (yC / sqRes) * sqRes + sqRes;
-    fptype dyMap = 1,    dy = sqRes,   adjYMap = 0;
+    result.yMap = (yC >> sqRes_pow2) + 1;
+    fptype dyMap = 1,    adjYMap = 0;
     fptype ctan_fp = (fptype) pgm_read_dword_near(CTan_fp + angle / screenW_lowResFactor);
     fptype dx_fp = sqRes * ctan_fp;
     if (angle > aroundh) { // 3rd or 4th quadrants (looking northward)
-        yMap--;
+        result.yMap--;
         dyMap = -1;
-        y -= sqRes;
         adjYMap = -1;
-        dy = -dy;
         dx_fp = -dx_fp;
     }
-    xHit_fp = (((fptype)xC) << fp) + ((yMap << sqRes_pow2) - yC) * ctan_fp;
+    result.xHit_fp = (((fptype)xC) << fp) + ((result.yMap << sqRes_pow2) - yC) * ctan_fp;
 
-    yMap += adjYMap;
-    int xMap = xHit_fp >> (fp + sqRes_pow2);
-    while ((0 < xHit_fp) && (xHit_fp < mapSizeWidth_fp) && (0 < y) && (y < mapSizeHeight) && //works much slower without checking y, although it shouldn't be done if the map is well closed
-           (MAP(yMap, xMap) == 0)) {
-        xHit_fp += dx_fp;
-        y += dy;
-        yMap += dyMap;
-        xMap = xHit_fp >> (fp + sqRes_pow2);
+    result.yMap += adjYMap;
+    result.xMap = result.xHit_fp >> (fp + sqRes_pow2);
+    while ((0 < result.xHit_fp) && (result.xHit_fp < mapSizeWidth_fp) && (0 < result.yMap) && (result.yMap < mapHeight) && //works much slower without checking y, although it shouldn't be done if the map is well closed
+           (MAP(result.yMap, result.xMap) == 0)) {
+        result.xHit_fp += dx_fp;
+        result.yMap += dyMap;
+        result.xMap = result.xHit_fp >> (fp + sqRes_pow2);
     }
 
-    yHit_fp = (yMap - adjYMap) << (sqRes_pow2 + fp);
+    result.yHit_fp = (result.yMap - adjYMap) << (sqRes_pow2 + fp);
 
-    return int32_t(yMap * mapWidth + xMap);
+    return result;
 }
 
 // returns wall ID (as map position and cell face)
-int32_t Cast(int16_t angle, fptype& xHit, fptype& yHit) {
-    fptype xX_fp = 1000000000, yX_fp = xX_fp, xY_fp = xX_fp, yY_fp = xX_fp;
-    int32_t wallIDX = CastX(angle, xX_fp, yX_fp);
-    int32_t wallIDY = CastY(angle, xY_fp, yY_fp);
+TCastResponse Cast(int16_t angle) {
+    TCastResponse result;
+    TCastResponse_fp resultX = CastX(angle);
+    TCastResponse_fp resultY = CastY(angle);
     // choose the nearest hit point
-    if (abs(((fptype)xC << fp) - xX_fp) < abs(((fptype)xC << fp) - xY_fp)) { // vertical wall ||
-        xHit = fptype(xX_fp >> fp);
-        yHit = fptype(yX_fp >> fp);
-        return 2 * wallIDX + 0;
+    if (abs(((fptype)xC << fp) - resultX.xHit_fp) < abs(((fptype)xC << fp) - resultY.xHit_fp)) { // vertical wall ||
+        result.xHit = int16_t(resultX.xHit_fp >> fp);
+        result.yHit = int16_t(resultX.yHit_fp >> fp);
+        result.xMap = resultX.xMap;
+        result.yMap = resultX.yMap;
+        result.horizontalWall = 0;
     }
     else { // horizontal wall ==
-        xHit = fptype(xY_fp >> fp);
-        yHit = fptype(yY_fp >> fp);
-        return 2 * wallIDY + 1;
+        result.xHit = int16_t(resultY.xHit_fp >> fp);
+        result.yHit = int16_t(resultY.yHit_fp >> fp);
+        result.xMap = resultX.xMap;
+        result.yMap = resultX.yMap;
+        result.horizontalWall = 1;
     }
+
+    return result;
 }
 
-void RenderColumn(int16_t col, int32_t h, int32_t textureColumn) {
-    uint32_t Dh_fp = (texRes << 16) / h; // 1 row in screen space is this many rows in texture space; use fixed point
+void RenderColumn(int16_t col, int32_t h, int8_t textureColumn) {
+    uint32_t Dh_fp = ((uint32_t)texRes << 16) / h; // 1 row in screen space is this many rows in texture space; use fixed point
     uint32_t textureRow_fp = 0;
     //int minRow = screenHh - h / 2; // no elevation
     int16_t minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100;
-    int16_t maxRow = min(minRow + h, screenH);
+    int8_t maxRow = min(minRow + h, screenH);
 
     if (minRow < 0) { // clip
         textureRow_fp = uint32_t(-minRow) * Dh_fp;
         minRow = 0;
     }
 
-    unsigned char* pScreen = screen + col;
-
-    uint16_t textureOffsetInit = textureColumn * texRes; // huge speedup: 90 degs pre-rotated texture
-    //const unsigned char* pTexture = Texture + textureOffsetInit;
+    uint16_t textureOffsetInit = (uint16_t)textureColumn << texRes_pow2; // huge speedup: 90 degs pre-rotated texture
 #ifndef TEXTURE_1bpp
-    static unsigned char texCol[texRes];
-    memcpy_P(texCol, Texture + textureColumn * texRes, texRes); // prefetch the whole column
+    const unsigned char* pTexture = Texture + textureOffsetInit;
 #endif
-    uint8_t maxRow8 = maxRow;
-    for (uint8_t row = minRow; row < maxRow8; row++) {
+    uint8_t row = minRow;
+    uint8_t pixelPack = 0;
+    uint8_t pixelBit = row & 7;
+    unsigned char* pScreenPixelPack = screen + col + (row / 8) * screenW;
+    for (; row < maxRow; row++) {
 #ifdef TEXTURE_1bpp // configured in "Generate Texture.cpp"
         uint16_t textureOffset = textureOffsetInit + uint16_t(textureRow_fp >> 16);
         uint16_t textureOffsetByte = textureOffset / 8;
-        uint8_t textureOffsetBit = uint8_t(textureOffset) % 8;
+        uint8_t textureOffsetBit = uint8_t(textureOffset) & 7;
 
-        //unsigned char pixelByte = *(Texture + textureOffsetByte);
-        unsigned char pixelByte = pgm_read_byte_near(Texture + textureOffsetByte);
+        unsigned char pixelByte = *(Texture + textureOffsetByte);
+        //unsigned char pixelByte = pgm_read_byte_near(Texture + textureOffsetByte);
         unsigned char pixel = (pixelByte >> textureOffsetBit) & 1;
 #else
-        //unsigned char pixel = *(pTexture + uint16_t(textureRow_fp >> 16));
-        //unsigned char pixel = pgm_read_byte_near(pTexture + uint16_t(textureRow_fp >> 16));
-        //unsigned char pixel = 1;
-        //unsigned char pixel = texCol[*(((uint16_t*)&textureRow_fp) + 1)];
-        unsigned char pixel = texCol[uint16_t(textureRow_fp >> 16)];
+        unsigned char pixel = pTexture[uint16_t(textureRow_fp >> 16)];
 #endif
 
-        unsigned char* screenAddr = pScreen + (row / 8) * screenW;
-        *screenAddr |= (pixel << (row & 7));
+        pixelPack |= (pixel << pixelBit);
+        pixelBit++;
+        if (pixelBit == 8)
+        {
+            *pScreenPixelPack = pixelPack;
+            pScreenPixelPack += screenW;
+            pixelPack = 0;
+            pixelBit = 0;
+        }
 
         textureRow_fp += Dh_fp;
     }
+
+    if (pixelBit != 0)
+        *pScreenPixelPack = pixelPack;
 }
 
 void Render() {
@@ -196,16 +206,14 @@ void Render() {
     memset(screen, 0, screenSize);
     long t1 = millis();   int dt_clear = int(t1 - t0);   t0 = t1;
 
-    uint16_t viewerToScreen_sq = sq(screenWh) * 3; // FOV = 60 degs => viewerToScreen = screenWh * sqrt(3)
-    uint32_t textureColumn;
+    uint8_t textureColumn;
     for (int16_t col = 0; col < screenW; col++) {
         int16_t ang = (screenWh - col + angleC + around) % around;
-        fptype xHit, yHit;
-        Cast(ang, xHit, yHit);
+        TCastResponse result = Cast(ang);
 
-        textureColumn = ((xHit + yHit) % sqRes) * texRes / sqRes;
+        textureColumn = ((result.xHit + result.yHit) & sqRes_LSBmask) >> (sqRes_pow2 - texRes_pow2); //suppose sqRes_pow2 >= texRes_pow2
 
-        int32_t dist_sq = sq(xC - xHit) + sq(yC - yHit) + 1; // +1 avoids division by zero
+        int32_t dist_sq = sq(xC - result.xHit) + sq(yC - result.yHit) + 1; // +1 avoids division by zero
         dist_sq = dist_sq * 2; // adjust until it looks fine; the smaller this one, the taller the walls
         int32_t h = int32_t(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
 
