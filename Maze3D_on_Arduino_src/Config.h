@@ -7,13 +7,13 @@
 // bits of fptype >= (number of bits for sqRes) + fp + (1 bit for sign) + X
 // where X = max((number of bits for mapSize), (number of bits for the integral part of tan/ctan))
 
-const int fp = 14; // fixed point position
+const int fp = 16; // fixed point position; multiple of 8 eases grouping of bits (with union)
 typedef int32_t fptype;
 
 const int16_t screenW = 128, screenH = 64, screenWh = screenW / 2, screenHh = screenH / 2;
 const int16_t around = 6 * screenW, aroundh = around / 2, aroundq = around / 4, around3q = 3 * aroundq; // FOV = 60 degs (6 FOVs = 360 degrees)
 
-const int8_t sqRes_pow2 = 8;
+const int8_t sqRes_pow2 = 8; //multiple of 8 eases grouping of bits (with union)
 const int sqRes = (1 << (int)sqRes_pow2), sqResh = sqRes / 2;
 const int sqRes_LSBmask = 0b11111111;
 const float sqRes_f = float(sqRes);
@@ -24,5 +24,7 @@ const uint16_t viewerToScreen_sq = screenWh * screenWh * 3; // FOV = 60 degs => 
 
 // viewer Current position, orientation and elevation [%]
 extern int32_t xC, yC;
+extern int8_t xCMap, yCMap;
+extern fptype xC_fp, yC_fp;
 extern int16_t angleC;
 extern int elevation_perc; // percentage

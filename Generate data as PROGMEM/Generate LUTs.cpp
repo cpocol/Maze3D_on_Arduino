@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <math.h>
 
-const int fp = 14; // fixed point position
-typedef int fptype;
+const int fp = 16; // fixed point position; multiple of 8 eases grouping of bits (with union)
+typedef __int32 fptype;
 
-const int screenW_lowResFactor = 1; // lower res
+const __int16 screenW_lowResFactor = 1; // lower res
 const int screenW = 128 / screenW_lowResFactor;
 const int around = 6 * screenW, aroundh = around / 2, aroundq = around / 4, around3q = 3 * aroundq; // FOV = 60 degs (6 FOVs = 360 degrees)
 
@@ -47,7 +47,7 @@ int main()
     if (!fp)
         printf("error");
 
-    fprintf(fp, "const int32_t screenW_lowResFactor = %d;\n\n", screenW_lowResFactor);
+    fprintf(fp, "const int16_t screenW_lowResFactor = %d;\n\n", screenW_lowResFactor);
     fprintf(fp, "const int32_t PROGMEM Tan_fp[] = {");
     for (int a = 0; a < around; a++) {
         if (a % 16 == 0)

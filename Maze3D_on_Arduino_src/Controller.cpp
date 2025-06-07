@@ -83,6 +83,12 @@ void loopController(int32_t& x, int32_t& y, int16_t& angle, int around) {
             move(x, y, angle);
         if (yValue < 200) // pedal backward
             move(x, y, (angle + around / 2) % around);
+
+        xCMap = x >> sqRes_pow2;
+        yCMap = y >> sqRes_pow2;
+
+        xC_fp = (fptype)x << fp;
+        yC_fp = (fptype)y << fp;
     }
 
     // jump

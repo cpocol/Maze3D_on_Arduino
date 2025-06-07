@@ -4,7 +4,7 @@
 
 typedef struct {
     fptype xHit_fp, yHit_fp;
-    int16_t xMap, yMap;
+    int8_t xMap, yMap;
     bool horizontalWall;
 } TCastResponse_fp;
 
