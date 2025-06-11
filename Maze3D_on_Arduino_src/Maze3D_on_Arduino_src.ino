@@ -84,12 +84,10 @@ TCastResponse_fp CastX(int16_t angle) { // hit vertical walls ||
     result.yHit_fp = yC_fp + ((result.xMap << sqRes_pow2) - xC) * tan_fp;
 
     result.xMap += adjXMap;
-    result.yMap = result.yHit_fp >> (sqRes_pow2 + fp);
     while ((0 < result.yHit_fp) && (result.yHit_fp < mapSizeHeight_fp) && //(0 < result.xMap) && (result.xMap < mapWidth) && //works much slower without checking x, although it shouldn't be done if the map is well closed
            (MAP(result.yMap, result.xMap) == 0)) {
         result.yHit_fp += dy_fp;
         result.xMap += dxMap;
-        result.yMap = result.yHit_fp >> (sqRes_pow2 + fp);
     }
 
     result.xHit_fp = fptype(result.xMap - adjXMap) << (sqRes_pow2 + fp);
@@ -117,12 +115,10 @@ TCastResponse_fp CastY(int16_t angle) { // hit horizontal walls ==
     result.xHit_fp = xC_fp + ((result.yMap << sqRes_pow2) - yC) * ctan_fp;
 
     result.yMap += adjYMap;
-    result.xMap = result.xHit_fp >> (sqRes_pow2 + fp);
     while ((0 < result.xHit_fp) && (result.xHit_fp < mapSizeWidth_fp) && //(0 < result.yMap) && (result.yMap < mapHeight) && //works much slower without checking y, although it shouldn't be done if the map is well closed
            (MAP(result.yMap, result.xMap) == 0)) {
         result.xHit_fp += dx_fp;
         result.yMap += dyMap;
-        result.xMap = result.xHit_fp >> (sqRes_pow2 + fp);
     }
 
     result.yHit_fp = fptype(result.yMap - adjYMap) << (sqRes_pow2 + fp);
@@ -135,9 +131,9 @@ TCastResponse Cast(int16_t angle) {
     TCastResponse_fp resultY = CastY(angle);
     // choose the nearest hit point
     if (abs(xC_fp - resultX.xHit_fp) < abs(xC_fp - resultY.xHit_fp)) // vertical wall ||
-        return {int16_t(resultX.xHit_fp >> fp), int16_t(resultX.yHit_fp >> fp), resultX.xMap, resultX.yMap, 0};
+        return {resultX.x, resultX.y, 0};
     else // horizontal wall ==
-        return {int16_t(resultY.xHit_fp >> fp), int16_t(resultY.yHit_fp >> fp), resultY.xMap, resultY.yMap, 1};
+        return {resultY.x, resultY.y, 1};
 }
 
 void RenderColumn(int16_t col, int32_t h, int8_t textureColumn) {
@@ -178,6 +174,7 @@ void RenderColumn(int16_t col, int32_t h, int8_t textureColumn) {
         if (pixelBit == 8)
         {
             *pScreenPixelPack = pixelPack;
+
             pScreenPixelPack += screenW;
             pixelPack = 0;
             pixelBit = 0;
@@ -190,7 +187,7 @@ void RenderColumn(int16_t col, int32_t h, int8_t textureColumn) {
         *pScreenPixelPack = pixelPack;
 }
 
-void Render() {
+void loop() {
     static long t_prev = millis();
     long t0 = millis();
     memset(screen, 0, screenSize);
@@ -200,7 +197,7 @@ void Render() {
         int16_t ang = (screenWh - col + angleC + around) % around;
         TCastResponse result = Cast(ang);
 
-        uint8_t textureColumn = ((result.xHit + result.yHit) & sqRes_LSBmask) >> (sqRes_pow2 - texRes_pow2); //suppose sqRes_pow2 >= texRes_pow2
+        uint8_t textureColumn = (result.xHit0 + result.yHit0) >> (sqRes_pow2 - texRes_pow2); //suppose sqRes_pow2 >= texRes_pow2
 
         int32_t dist_sq = sq(xC - result.xHit) + sq(yC - result.yHit) + 1; // +1 avoids division by zero
         dist_sq = dist_sq * 2; // adjust until it looks fine; the smaller this one, the taller the walls
@@ -230,9 +227,6 @@ void Render() {
     Serial.print(F("     FPS: "));         Serial.print(FPS);
     Serial.println("");
     t_prev = millis();
-}
 
-void loop() {
-    Render();
     loopController(xC, yC, angleC, around);
 }

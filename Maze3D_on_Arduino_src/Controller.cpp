@@ -75,13 +75,13 @@ void loopController(int32_t& x, int32_t& y, int16_t& angle, int around) {
     if (button == 0)
         bJump = true;
     else {
-        if (xValue > 800) // rotate left
+        if (xValue > (1024 * 0.55f)) // rotate left
             rotate(angle, -ROTATE_SPD, around);
-        if (xValue < 200) // rotate right
+        if (xValue < (1024 * 0.45f)) // rotate right
             rotate(angle, +ROTATE_SPD, around);
-        if (yValue > 800) // pedal forward
+        if (yValue > (1024 * 0.55f)) // pedal forward
             move(x, y, angle);
-        if (yValue < 200) // pedal backward
+        if (yValue < (1024 * 0.45f)) // pedal backward
             move(x, y, (angle + around / 2) % around);
 
         xCMap = x >> sqRes_pow2;
