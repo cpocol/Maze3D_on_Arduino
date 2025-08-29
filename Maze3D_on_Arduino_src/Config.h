@@ -14,12 +14,10 @@ const int16_t screenW = 128, screenH = 64, screenWh = screenW / 2, screenHh = sc
 const int16_t around = 6 * screenW, aroundh = around / 2, aroundq = around / 4, around3q = 3 * aroundq; // FOV = 60 degs (6 FOVs = 360 degrees)
 
 const int8_t sqRes_pow2 = 8; //multiple of 8 eases grouping of bits (with union)
-const int sqRes = (1 << (int)sqRes_pow2), sqResh = sqRes / 2;
+const int16_t sqRes = (1 << (int)sqRes_pow2), sqResh = sqRes / 2;
 const float sqRes_f = float(sqRes);
 const fptype sqRes_fp = (fptype)sqRes << fp;
 const int safety_dist = 32; // to wall
-
-const uint16_t viewerToScreen_sq = screenWh * screenWh * 3; // FOV = 60 degs => viewerToScreen = screenWh * sqrt(3)
 
 // viewer Current position, orientation and elevation [%]
 extern int32_t xC, yC;

@@ -136,11 +136,11 @@ TCastResponse Cast(int16_t angle) {
         return {resultY.x, resultY.y, 1};
 }
 
-void RenderColumn(int16_t col, int32_t h, int8_t textureColumn) {
+void RenderColumn(int16_t col, int16_t h, int8_t textureColumn) {
     uint32_t Dh_fp = ((uint32_t)texRes << 16) / h; // 1 row in screen space is this many rows in texture space; use fixed point; 8 is not enough
     uint32_t textureRow_fp = 0;
-    //int minRow = screenHh - h / 2; // no elevation
-    int16_t minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100;
+    int minRow = screenHh - h / 2; // no elevation
+    //int16_t minRow = ((100 - elevation_perc) * (2 * screenHh - h) / 2 + elevation_perc * screenHh) / 100; // causes a crash when pushing optimizations to the limit
     int8_t maxRow = min(minRow + h, screenH);
 
     if (minRow < 0) { // clip
@@ -193,15 +193,35 @@ void loop() {
     memset(screen, 0, screenSize);
     long t1 = millis();   int dt_clear = int(t1 - t0);   t0 = t1;
 
+// height adjustment factor; the smaller this one, the taller the walls
+//#define adjH 2 //old height computation
+#define adjH 3 / 2 //new height computation
+
+    //preparation for Old height computation
+    //static const uint16_t viewerToScreen_sq = screenWh * screenWh * 3; // FOV = 60 degs => viewerToScreen = screenWh * sqrt(3)
+
+    //preparation for New height computation
+    float angleC_f = angleC * 3.14f / aroundh;
+    int32_t Cos = cosf(-angleC_f) * 256 * adjH;
+    int32_t Sin = sinf(-angleC_f) * 256 * adjH;
+    static const int16_t C = sqRes * (screenWh * sqrtf(3));
+    int16_t xC16 = xC;
+    int16_t yC16 = yC;
+
     for (int16_t col = 0; col < screenW; col++) {
         int16_t ang = (screenWh - col + angleC + around) % around;
         TCastResponse result = Cast(ang);
 
         uint8_t textureColumn = (result.xHit0 + result.yHit0) >> (sqRes_pow2 - texRes_pow2); //suppose sqRes_pow2 >= texRes_pow2
 
-        int32_t dist_sq = sq(xC - result.xHit) + sq(yC - result.yHit) + 1; // +1 avoids division by zero
-        dist_sq = dist_sq * 2; // adjust until it looks fine; the smaller this one, the taller the walls
-        int32_t h = int32_t(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
+        //Old height computation
+        //int32_t dist_sq = sq(xC - result.xHit) + sq(yC - result.yHit) + 1; // +1 avoids division by zero
+        //dist_sq = dist_sq * adjH;
+        //int32_t h = int32_t(sqRes_f * sqrtf((viewerToScreen_sq + sq(screenWh - col)) / (float)dist_sq));
+
+        //New height computation
+        int16_t PS1_x = ((result.xHit - xC16)*Cos - (result.yHit - yC16)*Sin) / 256 + 1; // +1 avoids division by zero
+        int16_t h = C / PS1_x;
 
         RenderColumn(col, h, textureColumn);
     }
