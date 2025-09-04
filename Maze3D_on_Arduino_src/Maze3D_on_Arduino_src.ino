@@ -15,10 +15,6 @@
   I2C_Adafruit_SSD1306 display(screenW, screenH);
 #else
   #include "SPI_Adafruit_SSD1306.h"
-  // Arduino Mega default SPI pins:
-  // 50(CIPO) - not used for SSD1306
-  // 51(COPI)
-  // 52(SCK)
   #define OLED_RESET   5
   #define OLED_DC      4
   #define OLED_CS      3

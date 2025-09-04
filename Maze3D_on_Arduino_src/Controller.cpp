@@ -19,10 +19,10 @@ int jumping = 0;
 int z = 0; // same unit as sqRes
 int maxJump_idx;
 
-void move(int32_t& x, int32_t& y, int16_t angle) {
+void move(int32_t& x, int32_t& y, int16_t angle, float speed) {
     float rad = angle * 6.2831f / around;
-    fptype xTest = x + int(MOVE_SPD * cos(rad));
-    fptype yTest = y + int(MOVE_SPD * sin(rad));
+    fptype xTest = x + int(speed * cos(rad));
+    fptype yTest = y + int(speed * sin(rad));
 
     // check for wall collision
     int safetyX = ((aroundq < angle) && (angle < around3q)) ? +safety_dist : -safety_dist;
@@ -49,8 +49,8 @@ void move(int32_t& x, int32_t& y, int16_t angle) {
         x = xTest, y = yTest;
 }
 
-void rotate(int16_t& angle, int dir, int around) {
-    angle = (angle + dir * ROTATE_SPD + around) % around;
+void rotate(int16_t& angle, int speed, int around) {
+    angle = (angle + speed + around) % around;
 }
 
 void initController() {
@@ -68,21 +68,26 @@ void initController() {
 
 void loopController(int32_t& x, int32_t& y, int16_t& angle, int around) {
     int xValue = analogRead(JOYSTICK_X_PIN); // larger values leftwards
-    int yValue = analogRead(JOYSTICK_Y_PIN); // larger values upwards
+    int yValue = analogRead(JOYSTICK_Y_PIN); // larger values forward
     int button = digitalRead(JOYSTICK_BUTTON_PIN); // 0/1 = pressed/not pressed
 
     bool bJump = false;
     if (button == 0)
         bJump = true;
     else {
-        if (xValue > (1024 * 0.55f)) // rotate left
-            rotate(angle, -ROTATE_SPD, around);
-        if (xValue < (1024 * 0.45f)) // rotate right
-            rotate(angle, +ROTATE_SPD, around);
-        if (yValue > (1024 * 0.55f)) // pedal forward
-            move(x, y, angle);
-        if (yValue < (1024 * 0.45f)) // pedal backward
-            move(x, y, (angle + around / 2) % around);
+#define TH_LEFT 0.51f
+#define TH_RIGHT 0.49f
+#define TH_FORWARD 0.51f
+#define TH_BACKWARD 0.49f
+        if (xValue > (1024 * TH_LEFT)) // rotate left
+            rotate(angle, -ROTATE_SPD * (xValue - 1024 * TH_LEFT) / (1024 - 1024 * TH_LEFT), around);
+        if (xValue < (1024 * TH_RIGHT)) // rotate right
+            rotate(angle, +ROTATE_SPD * (1024 * TH_RIGHT - xValue) / (1024 * TH_RIGHT), around);
+
+        if (yValue > (1024 * TH_FORWARD)) // pedal forward
+            move(x, y, angle, MOVE_SPD * (yValue - 1024 * TH_FORWARD) / (1024 - 1024 * TH_FORWARD));
+        if (yValue < (1024 * TH_BACKWARD)) // pedal backward
+            move(x, y, (angle + around / 2) % around, MOVE_SPD * (1024 * TH_BACKWARD - yValue) / (1024 * TH_BACKWARD));
 
         xCMap = x >> sqRes_pow2;
         yCMap = y >> sqRes_pow2;

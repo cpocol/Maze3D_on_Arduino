@@ -1,7 +1,7 @@
 #pragma once
 
 #define MOVE_SPD (0.1f * sqRes)
-#define ROTATE_SPD 3
+#define ROTATE_SPD 8
 #define VERTICAL_SPD (sqRes/25)
 
 // bits of fptype >= (number of bits for sqRes) + fp + (1 bit for sign) + X
